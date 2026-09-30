@@ -12,7 +12,7 @@ related:
   - KB-01-round2-additions
   - KB-01-mcp-spec
   - KB-01-acp-spec
-  - KB-08-protocol-stack-clarification
+  - KB-04-protocol-stack
 authoritative: false
 implementation_status: specified
 references:

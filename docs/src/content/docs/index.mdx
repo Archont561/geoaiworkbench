@@ -1,0 +1,81 @@
+---
+title: geoaiworkbench
+description: Controlled empirical comparison of three paradigms for LLM-driven GIS automation — and the reproducible environment those results would be measured in.
+template: splash
+hero:
+  tagline: MCP-5, MCP-15 and CodeGen, compared inside a real QGIS environment. This repository is the environment — locked, gated, and restorable from git with no network.
+  image:
+    file: ../../assets/logo.svg
+  actions:
+    - text: Quickstart
+      link: /geoaiworkbench/start/quickstart/
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/Archont561/geoaiworkbench
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
+import ConditionGrid from "../../components/ConditionGrid.astro";
+import FeatureGrid from "../../components/FeatureGrid.astro";
+
+<div class="scope-note">
+  <p>
+    <strong>This repository is configuration and orchestration only.</strong> The three
+    packages under <code>python/</code> are scaffolds: manifests, one import and one
+    version test each, and no benchmark logic. Nothing here runs a benchmark. The
+    comparison belongs to a different repository; this one is the environment those
+    results would be measured in — and the measurement is only credible if the
+    environment is reproducible.
+  </p>
+</div>
+
+## The comparison
+
+Three paradigms for driving GIS work with an LLM, run against production CLI agents
+used as black boxes, on GeoAnalystBench tasks stratified by difficulty:
+
+<ConditionGrid />
+
+Two independent questions fall out of that design: **does tool-calling structure beat
+free-form code** (MCP versus CodeGen), and **does adding tools help or hurt** (MCP-5
+versus MCP-15). The second is the interesting one — the literature predicts an
+inverted-U between tool count and performance, and no prior work has tested it in a
+GIS setting.
+
+<LinkCard
+  title="Three paradigms, in detail"
+  description="Tool tiers, what each condition can and cannot do, and the hypotheses attached to each."
+  href="/geoaiworkbench/experiment/paradigms/"
+/>
+
+## What this repository guarantees
+
+<FeatureGrid />
+
+## Start here
+
+<CardGrid>
+  <Card title="Install" icon="download">
+    One `pixi install --frozen --all` materialises both environments. See
+    [Installation](/geoaiworkbench/start/installation/).
+  </Card>
+  <Card title="Run the gate" icon="approve-check">
+    `pixi run gates` is the whole check list, and it needs no network. See
+    [Quickstart](/geoaiworkbench/start/quickstart/).
+  </Card>
+  <Card title="Understand the split" icon="puzzle">
+    Why there are two pixi environments, and the one rule about nested `pixi run`. See
+    [Two pixi environments](/geoaiworkbench/repository/environments/).
+  </Card>
+  <Card title="Go offline" icon="seti:folder">
+    Reconstruct the whole environment from a git branch on a machine with no network.
+    See [Offline sandbox](/geoaiworkbench/repository/offline-sandbox/).
+  </Card>
+</CardGrid>
+
+## Licence
+
+GPL-2.0-or-later.

@@ -1,0 +1,48 @@
+---
+/*
+ * The three experimental conditions, as three cards.
+ *
+ * The numbers are the ones fixed by the research design
+ * (.knowledge/05-mcp-tools/three-condition-experiment.md): tool counts 5, 15
+ * and unlimited, with the schema-token cost that follows from them. They are
+ * stated here once and referenced from the prose rather than repeated, because
+ * a tool count that appears in four pages is a tool count that will disagree
+ * with itself after the first revision.
+ */
+const conditions = [
+  {
+    key: "mcp5",
+    name: "MCP-5",
+    count: "5",
+    unit: "tools · tiers 1–2",
+    desc: "The paradigm-clean baseline: inspection plus buffer, clip and reproject. Maximum contrast with CodeGen, about 550 tokens of schema overhead.",
+  },
+  {
+    key: "mcp15",
+    name: "MCP-15",
+    count: "15",
+    unit: "tools · tiers 1–5",
+    desc: "A realistic GIS toolkit, still below the reported tool-selection degradation threshold. About 1450 tokens of schema overhead.",
+  },
+  {
+    key: "codegen",
+    name: "CodeGen",
+    count: "∞",
+    unit: "any Processing algorithm",
+    desc: "Free-form PyQGIS. No schema overhead and no parameter validation: errors surface as stderr, and recovery means fixing code rather than retrying a call.",
+  },
+];
+---
+
+<div class="condition-grid not-content">
+  {
+    conditions.map((c) => (
+      <div class={`condition-card ${c.key}`}>
+        <div class="condition-name">{c.name}</div>
+        <div class="condition-count">{c.count}</div>
+        <div class="condition-name">{c.unit}</div>
+        <p class="condition-desc">{c.desc}</p>
+      </div>
+    ))
+  }
+</div>

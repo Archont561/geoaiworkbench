@@ -12,7 +12,7 @@ related:
   - KB-04-system-architecture
   - KB-04-asyncio-in-qt
   - KB-04-bridge-tcp-protocol
-  - KB-08-separate-process-decision
+  - backlog-decision-3
 authoritative: true
 implementation_status: specified
 llm_hints:
@@ -149,4 +149,4 @@ Process 2: QGIS Bridge (Python + Qt)
 
 - [KB-04-bridge-tcp-protocol](bridge-tcp-protocol.md) — TCP protocol details
 - [KB-04-asyncio-in-qt](asyncio-in-qt.md) — Event loop analysis
-- [KB-08-separate-process-decision](../08-technology-decisions/separate-process-decision.md) — Decision rationale
+- backlog `decision-3` — Decision rationale

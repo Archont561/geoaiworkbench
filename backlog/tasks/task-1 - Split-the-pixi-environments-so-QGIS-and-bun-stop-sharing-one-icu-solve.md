@@ -4,9 +4,10 @@ title: Split the pixi environments so QGIS and bun stop sharing one icu solve
 status: Done
 assignee: []
 created_date: '2026-09-30 19:52'
-updated_date: '2026-09-30 21:12'
+updated_date: '2026-09-30 21:45'
 labels:
   - orchestration
+milestone: m-0
 dependencies: []
 priority: high
 ordinal: 1000

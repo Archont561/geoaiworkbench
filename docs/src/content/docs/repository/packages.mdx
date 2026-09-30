@@ -1,0 +1,62 @@
+---
+title: The Python packages
+description: geoai-core, geoai-mcp and geoai-bench — what each one is, what it deliberately is not, and how they are registered with the environment.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+<Aside type="caution" title="These are scaffolds">
+  All three carry manifests, one import and one version test. None carries benchmark
+  logic. If you are about to add a feature, this is the wrong repository.
+</Aside>
+
+| Package | What it is | What it is not |
+| --- | --- | --- |
+| `python/geoai-core` | Manifests, the import, the version test. | Any shared implementation. |
+| `python/geoai-mcp` | The package that will carry an MCP server. | An MCP server, or any tools. |
+| `python/geoai-bench` | A Typer/Rich console script (`geoai-bench`). | A benchmark harness. |
+
+## Registration, not installation
+
+All three are **path source dependencies** of the root environment. `pixi install`
+materialises them into `.pixi/envs/default`, so `import geoai_core` works from any
+command in the project, and `pixi run verify-packages` is the gate that proves it:
+
+```bash
+pixi run verify-packages
+# registered packages importable from the root environment: geoai_core geoai_mcp geoai_bench
+```
+
+There is deliberately **no** `pip install -e python/*` task. The packages are already
+in the environment; a task that pip-installed them would build a second,
+differently-resolved copy of each and the interpreter would import whichever came
+first on `sys.path`.
+
+## Why their turbo caching is off
+
+`python/turbo.json` sets `cache: false` on every task. Not because the tasks are
+expensive — they are the cheapest in the repository — but because turbo hashes
+*package inputs*, and what actually determines a Python result here is the
+*environment*: QGIS's version, the ICU solve, the active `PYTHONPATH`. All three can
+change what a test observes without changing a line of Python, and none of them is in
+turbo's hash. A cache hit would replay a result produced against a different
+`pixi.lock`, which is a stale green — the most expensive kind of cheap.
+
+The container package `python/package.json` exists purely so that nested
+`turbo.json` is read at all: the root `package.json` lists `python` explicitly *and*
+globs `python/*`, because the glob matches the three packages but not the container.
+Without the explicit entry the nested config is silently inert, and nothing errors.
+
+## The coverage data-file race
+
+Each package's `cov` script exports its own `COVERAGE_FILE`:
+
+```bash
+COVERAGE_FILE=.coverage.geoai_core pixi run -e default -- python -m pytest …
+```
+
+This is not belt-and-braces. Turbo runs all three `cov` tasks concurrently in one
+working directory and coverage's default data file is the single path `./.coverage`,
+so the three runs interleave writes into one SQLite file. Observed exactly:
+geoai-core's report listing all three packages, geoai-mcp's listing two. The numbers
+stay plausible — which is the dangerous part — and only the merged total is wrong.

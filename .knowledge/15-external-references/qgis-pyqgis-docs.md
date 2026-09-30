@@ -9,7 +9,7 @@ created: 2026-09-10
 updated: 2026-09-11
 source_conversation_parts: [4, 7]
 related:
-  - KB-08-qgis-version-3.44
+  - backlog-decision-2
   - KB-15-github-repositories
 authoritative: false
 implementation_status: specified
@@ -247,4 +247,4 @@ Existing QGIS + MCP integration:
   - Smaller tool set; also exposes `execute_code`
 
 ### QGIS Plugin Tooling
-All analyzed in [KB-08-cli-agent-selection](../08-technology-decisions/cli-agent-selection.md).
+All analyzed in backlog `decision-6`.

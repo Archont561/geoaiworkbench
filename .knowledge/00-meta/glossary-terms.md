@@ -10,7 +10,7 @@ updated: 2026-09-11
 source_conversation_parts: [1, 2, 3, 8, 15]
 related:
   - KB-GLOSSARY
-  - KB-08-protocol-stack-clarification
+  - KB-04-protocol-stack
 authoritative: true
 implementation_status: specified
 llm_hints:

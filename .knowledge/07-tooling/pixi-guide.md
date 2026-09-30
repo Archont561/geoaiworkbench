@@ -10,7 +10,7 @@ updated: 2026-09-11
 source_conversation_parts: [7, 15]
 related:
   - KB-15-pixi-docs
-  - KB-08-pixi-vs-uv
+  - backlog-decision-1
   - KB-06-pyproject-toml
 authoritative: true
 implementation_status: specified
@@ -106,5 +106,5 @@ exit                              # Deactivate
 ## Related Files
 
 - [KB-15-pixi-docs](../15-external-references/pixi-docs.md)
-- [KB-08-pixi-vs-uv](../08-technology-decisions/pixi-vs-uv.md)
+- backlog `decision-1`
 - [KB-06-pyproject-toml](../06-implementation/pyproject-toml.md)

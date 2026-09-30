@@ -21,8 +21,8 @@ There are two Pixi environments. `default` carries QGIS, the Python toolchain an
 instruments; `bun` carries bun and nothing else. This is a solve constraint, not tidiness:
 QGIS and bun pin incompatible `icu` (75.1 versus 78.3), so one environment carrying both
 only solved because the QGIS floor was pinned down to 3.44.7. The floor is free to move
-now. That constraint is recorded in
-`.knowledge/08-technology-decisions/qgis-version-3.44.md`.
+now. That constraint is recorded as `decision-2` in the backlog decision register
+(`pixi run backlog -- decision list`).
 
 **A nested `pixi run TASK` runs in the environment it was called from.** The task's own
 `default-environment` is honoured on the outermost invocation only. Measured on pixi
@@ -78,6 +78,21 @@ deleted there does not merely untrack a directory, it hands that directory to Bi
 Biome's own `useBiomeIgnoreFolder` lint is what removed the redundant `!.pixi/**`
 negations from `files.includes`; do not add them back.
 
+**`biome.json` `overrides`.** One override, and it is narrow: `noUnusedVariables` is
+off for `**/*.astro`. Biome parses an Astro component's frontmatter as JavaScript but
+does not parse the template below it, so every `const` a component defines for its own
+markup reads as unused. The rule stays on everywhere else; turning it off globally to
+silence two components would be trading a real check for a formatting convenience.
+
+**`bunfig.toml` `linker = "hoisted"`.** Bun 1.3 defaults a workspace to the isolated
+layout — `node_modules/.bun/<pkg>` plus symlinks — which keeps a package's optional
+native bindings inside *its* nested `node_modules`. Astro bundles its prerender step
+into `docs/dist/.prerender/`, and the bundled chunks `require` those bindings from
+there; the ancestors of that directory are `docs/` and the repository root, neither of
+which sees the nested copy. The failure is `Cannot find module
+'@bruits/satteri-linux-x64-gnu'` followed by advice about an npm bug that is not the
+problem. A hoisted tree puts the binding where the bundle looks for it.
+
 **`package.json` `workspaces`.** `python` is listed explicitly *and* globbed.
 `python/*` matches `python/geoai-core` and its siblings but **not**
 `python/package.json`, and the container package is the one whose `turbo.json` turns
@@ -92,6 +107,34 @@ active `PYTHONPATH` all change what a test observes without changing a line of P
 Turbo's hash covers neither. A cache hit would replay a result from a different solve.
 `build` is also uncached: it runs `pixi run -e default verify-packages`, which is a
 statement about the environment rather than a build product.
+
+## The documentation site
+
+`docs/` is an Astro + Starlight app and a member of the same Bun workspace, so it is
+installed by the same `bun install` and built by the same `turbo run build`. It is the
+**only** package whose `build` produces an artefact turbo may cache: Astro's output is
+a pure function of `docs/` plus the lockfile, both of which turbo hashes, which is the
+opposite of the Python situation described above. That override lives in
+`docs/turbo.json`.
+
+Three rules for changing it:
+
+- **Never hardcode the `/geoaiworkbench` prefix.** The site is a GitHub Pages *project*
+  site, so `astro.config.mjs` sets `base`. Sidebar entries use `slug`, prose uses
+  relative links, and both are `base`-aware and validated by `astro check`. A
+  root-absolute link 404s in production; a prefixed one breaks when the site moves.
+- **No page states a release number.** `pixi run docs-build` exports `GEOAI_VERSION`
+  from `scripts/version.ts` — the same authority `version-check` gates on — and
+  `astro.config.mjs` exposes it as `import.meta.env.GEOAI_VERSION`. It is declared in
+  `docs/turbo.json`'s `env`, so a version change invalidates the cached build.
+- **`docs-preview` depends on `docs-build`.** `astro preview` against an empty `dist/`
+  reports a missing directory, which reads as a broken task rather than a missing step.
+
+`.github/workflows/docs.yml` publishes it. Pull requests build and stop; only `main`
+deploys. It installs `-e bun` alone — the docs need no QGIS, and installing `default`
+there would turn a two-minute job into a twenty-minute one for no output. Note that
+GitHub Actions does not support YAML anchors, which is why its two `paths` lists are
+duplicated rather than shared.
 
 ## The coverage data-file race
 

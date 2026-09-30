@@ -1,0 +1,128 @@
+/*
+ * Starlight theming for geoaiworkbench.
+ *
+ * Only two things are customised: the accent ramp (a GIS-ish teal, so the site
+ * does not look like an unbranded Starlight default) and a small set of layout
+ * primitives used by the landing page components. Everything else is left to
+ * Starlight — a docs site that rewrites the theme is a docs site that breaks on
+ * the next theme release.
+ */
+
+:root {
+  --sl-color-accent-low: #10302f;
+  --sl-color-accent: #14a098;
+  --sl-color-accent-high: #a8ebe5;
+}
+
+:root[data-theme="light"] {
+  --sl-color-accent-low: #d3f4f0;
+  --sl-color-accent: #0d7f78;
+  --sl-color-accent-high: #0a4a46;
+}
+
+/* ── landing-page feature grid ─────────────────────────────────────────────── */
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+.feature-card {
+  background: var(--sl-color-bg);
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.feature-card:hover {
+  border-color: var(--sl-color-accent);
+  transform: translateY(-2px);
+}
+
+.feature-card h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.4rem;
+}
+
+.feature-card p {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--sl-color-gray-2);
+  margin: 0;
+}
+
+/* ── the three experimental conditions ─────────────────────────────────────── */
+
+.condition-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+.condition-card {
+  border: 2px solid var(--sl-color-gray-5);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  background: var(--sl-color-bg);
+}
+
+.condition-card .condition-name {
+  font-family: var(--sl-font-mono);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  color: var(--sl-color-accent);
+}
+
+.condition-card .condition-count {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.1;
+  margin: 0.25rem 0;
+}
+
+.condition-card .condition-desc {
+  font-size: 0.85rem;
+  color: var(--sl-color-gray-2);
+  margin: 0;
+}
+
+.condition-card.mcp5 {
+  border-color: #14a098;
+}
+.condition-card.mcp15 {
+  border-color: #f59e0b;
+}
+.condition-card.codegen {
+  border-color: #6366f1;
+}
+
+/* ── the "this is a scaffold" callout on the landing page ──────────────────── */
+
+.scope-note {
+  border-left: 4px solid var(--sl-color-accent);
+  background: var(--sl-color-accent-low);
+  border-radius: 0.5rem;
+  padding: 0.9rem 1.1rem;
+  margin: 1.5rem 0;
+  font-size: 0.95rem;
+}
+
+.scope-note p {
+  margin: 0;
+}
+
+/* Tables in this site are mostly two- and three-column fact tables; the default
+   full-bleed width leaves them stretched and hard to scan on wide screens. */
+.sl-markdown-content table {
+  display: table;
+  width: 100%;
+}

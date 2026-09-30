@@ -13,7 +13,7 @@ related:
   - KB-02-hypotheses
   - KB-02-final-research-design
   - KB-03-metrics-overview
-  - KB-08-decision-tool-count
+  - backlog-decision-7
 authoritative: true
 implementation_status: specified
 llm_hints:
@@ -173,7 +173,7 @@ Polish: "PB" = "Pytanie Badawcze" (Research Question).
 - **H7d:** MCP-5 > MCP-15 on execution determinism (fewer choices = more consistent)
 - **H7e:** Tool selection accuracy decreases from MCP-5 to MCP-15
 
-**Related:** [KB-01-mo-et-al-2025](../01-literature/papers/mo-et-al-2025.md), [KB-01-song-et-al-2025](../01-literature/papers/song-et-al-2025.md), [KB-08-decision-tool-count](../08-technology-decisions/decision-tool-count.md)
+**Related:** [KB-01-mo-et-al-2025](../01-literature/papers/mo-et-al-2025.md), [KB-01-song-et-al-2025](../01-literature/papers/song-et-al-2025.md), backlog `decision-7`
 
 ## Cross-Cutting Design Principle (PB5-derived)
 

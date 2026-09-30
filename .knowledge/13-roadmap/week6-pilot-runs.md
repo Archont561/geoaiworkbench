@@ -52,7 +52,12 @@ Day 5: Final pilot analysis; validate statistical tests on pilot data; verify Bo
 
 ## Success Criteria
 
-60-240 pilot runs complete; metrics validated; crash recovery tested; no critical bugs
+This week closes backlog milestone `m-3` (M4 Pilot validated). The criteria are the
+milestone's, so they are kept there rather than restated here:
+
+```
+pixi run backlog -- milestone list
+```
 
 ## TDD Cycle
 

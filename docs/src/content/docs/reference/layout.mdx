@@ -1,0 +1,62 @@
+---
+title: Repository layout
+description: What each top-level file and directory owns, and where the reasoning for a given decision is written down.
+---
+
+```
+geoaiworkbench/
+├── pixi.toml              two environments, every task, and the gates list
+├── pixi.lock              the environments, literally. `--frozen` makes drift an error
+├── package.json           the Bun workspace: python, python/*, docs
+├── bun.lock               one resolution record for every member
+├── turbo.json             the fan-out; no globalPassThroughEnv, on purpose
+├── biome.json             JSON and TypeScript, scoped by .gitignore
+├── lefthook.yml           commit-msg (convco) and pre-push (scripts/ci.sh)
+├── .pixi-sandbox.toml     what the offline transport contains, reviewed in the open
+├── AGENTS.md              the reasoning JSON and TOML cannot carry themselves
+├── README.md              the short version of this site
+│
+├── python/
+│   ├── package.json       container member: exists so python/turbo.json is read
+│   ├── turbo.json         cache: false on every task, for all three packages
+│   ├── geoai-core/        manifests, the import, the version test
+│   ├── geoai-mcp/         the package that will carry an MCP server
+│   └── geoai-bench/       the geoai-bench console script
+│
+├── docs/                  this site — Astro + Starlight, a Bun workspace member
+│   ├── astro.config.mjs   site, base, sidebar
+│   ├── turbo.json         the only package whose build has cacheable outputs
+│   └── src/content/docs/  the pages
+│
+├── scripts/
+│   ├── ci.sh              the order and the producers; calls `pixi run gates`
+│   ├── lib.sh             sourced by the others; puts the caller at the repo root
+│   ├── lint-toml.sh       taplo, scoped to two files
+│   ├── restore.sh/.ps1    offline reconstruction (generated; carries LOCAL EDITs)
+│   └── version.ts         the version, and the check that every manifest agrees
+│
+├── .github/workflows/
+│   ├── ci.yml             one job, one command: `pixi run ci`
+│   ├── docs.yml           build this site, publish it to GitHub Pages
+│   └── publish-sandbox.yml   push the offline transport to its orphan branch
+│
+├── .knowledge/            216 files: the research design, metrics, tool specs
+├── backlog/               the Markdown task backlog (`pixi run backlog -- …`)
+└── .devcontainer/         the whole thing, built: environments, workspace, hooks
+```
+
+## Where a rationale lives
+
+| Question | Answer lives in |
+| --- | --- |
+| Why two environments? Why is Python caching off? | `AGENTS.md` |
+| What must pass before a commit lands? | `pixi.toml`, task `gates` |
+| Why is this package.json shaped like that? | a `//`-prefixed key in the file itself |
+| What is the experiment measuring? | `.knowledge/`, and this site's *Experiment* section |
+| What is still to do? | `backlog/tasks/`, via `pixi run backlog -- …` |
+
+JSON files cannot carry comments and both `turbo.json` and `biome.json` reject
+unknown top-level keys, so `//` keys are not an option there — that reasoning is in
+`AGENTS.md` instead. `package.json` is the exception: Bun parses it as strict JSON,
+and `//`-prefixed *keys* are valid JSON, which is why the manifests in this
+repository carry long ones.

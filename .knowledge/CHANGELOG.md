@@ -1,6 +1,6 @@
 ---
 id: KB-CHANGELOG
-title: "Decision Evolution Log"
+title: "Design Evolution Log"
 category: meta
 subcategory: history
 tags: [changelog, decisions, evolution, history]
@@ -10,15 +10,15 @@ updated: 2026-09-11
 source_conversation_parts: [all]
 related:
   - KB-README
-  - KB-14-all-decisions-summary
+  - backlog-decision-register
 authoritative: true
 implementation_status: specified
 llm_hints:
-  primary_purpose: "Chronological log of major decision changes over the project lifecycle"
+  primary_purpose: "Chronological log of how the design changed and what superseded what"
   key_facts:
     - "Tracks when decisions were made and superseded"
     - "Explains WHY decisions changed, not just WHAT"
-    - "Cross-references decision log files"
+    - "Cross-references backlog decisions for the rationale"
     - "Major update 2026-09-11: added MCP-15 as second experimental condition"
   common_questions:
     - "When did we decide to use Pixi over uv?"
@@ -27,9 +27,19 @@ llm_hints:
     - "Why was MCP-15 added?"
 ---
 
-# Decision Evolution Log
+# Design Evolution Log
 
-Chronological log of major decisions and their evolution during the GeoAIWorkbench project.
+Chronological log of how the GeoAIWorkbench design changed: what was tried, what
+superseded it, and when. This file is the *history*.
+
+The decisions themselves — their context, the alternatives weighed and the
+consequences accepted — are backlog objects, not prose here:
+
+```
+pixi run backlog -- decision list
+```
+
+Each stage below points at the decision that settled it.
 
 ## 2026-09-11 — Tool Count Expansion (Major Update)
 
@@ -39,7 +49,7 @@ Chronological log of major decisions and their evolution during the GeoAIWorkben
 - **Added** `GEOMCP_TIER` environment variable for runtime tier control
 - **Added** 10 new tool specifications: dissolve, intersection, difference, union, spatial_join, select_by_location, centroid, simplify, merge_layers, calculate_field
 - **Updated** experimental structure from 2×4×50×3 = 1,200 runs to 3×4×50×3 = 1,800 runs
-- **Rationale:** Literature evidence from Mo et al. (2025), Song et al. (2025), Fan et al. (2026) supports making tool count an experimental variable. Turns "5 tools is unrealistically limited" from a limitation into a research contribution.
+- **Why:** literature evidence (Mo et al. 2025, Song et al. 2025, Fan et al. 2026) made tool count worth varying. Recorded as backlog `decision-7`.
 
 ## 2026-09-11 — CodeGen Evaluation Architecture (Major Update)
 
@@ -49,11 +59,11 @@ Chronological log of major decisions and their evolution during the GeoAIWorkben
 - **Added** `checkParameterValues()` from QGIS Processing registry for semantic validation
 - **Added** Docker QGIS containerization for runtime execution isolation
 - **Added** `processing.run()` monkeypatching for runtime tracing
-- **Rationale:** Search revealed GeoAnalystBench uses ArcPy (not PyQGIS). GeoAIWorkbench must build QGIS-native evaluation pipeline. Naive `ast` + `subprocess.run()` insufficient for fair MCP vs CodeGen comparison.
+- **Why:** GeoAnalystBench turned out to use ArcPy, not PyQGIS, so the evaluation pipeline had to be QGIS-native; naive `ast` + `subprocess.run()` cannot make the MCP vs CodeGen comparison fair. Kept in [KB-02-final-research-design](02-research-design/final-research-design.md).
 
 ## 2026-09-10 — Batch 1: Foundation
 
-- **Created** knowledge base structure with 16 top-level directories
+- **Created** knowledge base structure with 16 top-level directories (now 13: the two decision directories became backlog decisions)
 - **Established** YAML frontmatter schema for all files
 - **Defined** file ID convention: `KB-NN-slug`
 
@@ -69,31 +79,37 @@ Chronological log of major decisions and their evolution during the GeoAIWorkben
 - **Refined:** ACP merged into A2A in August 2025; clarified MCP = tools, A2A = agents
 - **Resolution:** Focus on MCP for tools; A2A deferred to future work
 - **Further clarification:** OpenCode's `opencode acp` uses ACP (editor-agent), not A2A
+- **Recorded as:** [KB-04-protocol-stack](04-architecture/protocol-stack.md) (a taxonomy, not a decision)
 
 ### Stage 3 — Agent Selection
 - **Initial:** Build custom agents
 - **Superseded by:** Use production CLI agents as black boxes
 - **Final:** 4 primary agents (OpenCode, Claude Code, Codex, Goose) + 2 backup (Gemini, Cline)
+- **Recorded as:** backlog `decision-6`
 
 ### Stage 4 — Execution Environment
 - **Initial:** Cloud-based agents
 - **Superseded by:** QGIS as unified environment (real-world relevance)
 - **Final:** Standalone MCP server + TCP bridge to QGIS plugin (avoids asyncio+Qt conflicts)
+- **Recorded as:** backlog `decision-3`
 
 ### Stage 5 — MCP Server Architecture
 - **Initial:** Use existing qgis-mcp server
 - **Blocked by:** qgis-mcp exposes `execute_code`, contaminating paradigm boundary
 - **Resolution:** Build custom GeoMCP plugin with hard paradigm boundary
+- **Recorded as:** backlog `decision-3` (separate process) and `decision-4` (TCP bridge)
 
 ### Stage 6 — MCP SDK Choice
 - **Initial:** Use `mcp.server.fastmcp.FastMCP` (v1 API)
 - **Blocked by:** MCP SDK v2 released July 2026 with breaking changes; FastMCP became separate package
 - **Resolution:** Use standalone `fastmcp` package v4.0.3 with `@mcp.tool` decorator (no parens)
+- **Recorded as:** backlog `decision-8`
 
 ### Stage 7 — Package Manager
 - **Initial:** uv with system QGIS
 - **Superseded by:** Pixi (Conda + PyPI unified) — solves QGIS/GDAL/GEOS/PROJ reproducibility
 - **Resolution:** Pixi 0.80.0 as primary package manager, conda-forge for native deps
+- **Recorded as:** backlog `decision-1`
 
 ### Stage 8 — Research Questions
 - **Initial:** 5 research questions (PB1-PB5) focused on comparison
@@ -107,11 +123,12 @@ Chronological log of major decisions and their evolution during the GeoAIWorkben
 - **Enhanced Round 2:** Added Layer 7 (Security) with attack surface + injection resistance
 - **Enhanced Round 3 (2026-09-11):** Added tool count metrics: Tool Selection Degradation, Context Window Utilization
 - **Final:** 7 layers, ~28 metrics total
+- **Recorded as:** backlog `decision-15`
 
 ### Stage 10 — Infrastructure Libraries
 - **Initial:** Roll-your-own for cache, retry, logging
 - **Refined:** Use mature libraries: diskcache, tenacity, structlog, filelock, platformdirs
-- **Rationale:** "GeoAIWorkbench should contain the genuinely novel QGIS/MCP/benchmark logic; commodity infrastructure should come from mature libraries"
+- **Recorded as:** backlog `decision-14`
 
 ### Stage 11 — Bibliography Evolution
 - **Round 0:** 13 initial references
@@ -123,12 +140,12 @@ Chronological log of major decisions and their evolution during the GeoAIWorkben
 - **Initial:** "Is MCP better than code generation?"
 - **Refined:** "How does MCP as a protocol affect interoperability, planning, parameterization, output validity, and security?"
 - **Enhanced (2026-09-11):** "How does MCP tool count affect the tradeoff between capability and tool selection accuracy?"
-- **Rationale:** Protocol-level evaluation is more defensible and matches ACM TOSEM / AAMAS venue standards
+- **Recorded as:** backlog `decision-17`
 
 ### Stage 13 — Experimental Design Expansion
 - **Initial (2026-09-10):** 2 conditions (MCP-5 vs CodeGen), 1,200 runs
 - **Enhanced (2026-09-11):** 3 conditions (MCP-5 vs MCP-15 vs CodeGen), 1,800 runs
-- **Rationale:** Tool count as experimental variable directly tests Mo et al., Song et al., Fan et al. hypotheses in GIS context — first such study
+- **Recorded as:** backlog `decision-7`
 
 ## Key Reversals
 

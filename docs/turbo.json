@@ -1,0 +1,21 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "//": "The docs site is the one package in this repository whose build produces a cacheable artifact, so it is the one package that overrides the root's empty `outputs`. The Python packages go the other way — `cache: false` everywhere, because a Python result depends on the pixi environment and turbo's hash does not cover it (python/turbo.json). Astro's build is a pure function of this directory plus the lockfile, both of which turbo does hash, so the cache is honest here. `.astro/` is listed as an output alongside `dist/` because it holds the generated content-collection types that `astro check` reads; restoring `dist/` from cache without it leaves the next `check` re-syncing from scratch. `dev` cannot be cached and must not be killed when it stops producing output, hence `persistent`.",
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["astro.config.mjs", "tsconfig.json", "package.json", "src/**", "public/**"],
+      "outputs": ["dist/**", ".astro/**"],
+      "env": ["GEOAI_VERSION"]
+    },
+    "lint": {
+      "inputs": ["astro.config.mjs", "tsconfig.json", "package.json", "src/**"],
+      "outputs": []
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}

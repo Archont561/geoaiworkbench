@@ -11,7 +11,7 @@ source_conversation_parts: [1, 4, 7]
 related:
   - KB-01-original-13-references
   - KB-01-mcp-spec
-  - KB-08-protocol-stack-clarification
+  - KB-04-protocol-stack
 authoritative: false
 implementation_status: specified
 references:

@@ -52,7 +52,12 @@ Day 5: Full integration test: harness runs single task end-to-end for all 3 cond
 
 ## Success Criteria
 
-Harness runs tasks; JSONL populated; OQS, PEA, TSR computed correctly
+This week closes backlog milestone `m-2` (M3 Full pipeline). The criteria are the
+milestone's, so they are kept there rather than restated here:
+
+```
+pixi run backlog -- milestone list
+```
 
 ## TDD Cycle
 

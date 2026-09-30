@@ -1,0 +1,97 @@
+---
+title: Pixi tasks
+description: Every task in pixi.toml, the environment it runs in, and what it is for.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+`pixi run --help` prints this list from the manifest, which is the copy that cannot
+go stale. This page groups it and says why each group exists.
+
+<Aside type="tip">
+  Tasks whose environment is **bun** carry `default-environment = "bun"`. From inside
+  an already-activated environment, name it explicitly: `pixi run -e bun <task>`.
+</Aside>
+
+## Setup
+
+| Task | Env | Purpose |
+| --- | --- | --- |
+| `setup` | both | The whole workspace: Bun install plus git hooks. |
+| `bun-install` | bun | `bun install --frozen-lockfile` from the root lockfile. |
+| `hooks-install` | default | `lefthook install`. Idempotent; run once per clone. |
+
+## The repository-wide graph
+
+| Task | Env | Purpose |
+| --- | --- | --- |
+| `build` | bun | `turbo run build` across every package that has one. |
+| `test` | bun | `turbo run test` — all three Python packages in one fan-out. |
+| `lint` | bun | `turbo run lint`. |
+| `cov` | bun | `turbo run cov`; produces `python/*/coverage.xml`. |
+| `fmt` | bun | `turbo run fmt` — each package's own formatter. |
+| `lint-js` / `fmt-js` | bun | Biome over the repository's JSON and TypeScript, i.e. the files with no package to belong to. |
+
+## Documentation
+
+| Task | Env | Purpose |
+| --- | --- | --- |
+| `docs-dev` | bun | Astro dev server on `http://localhost:4321/geoaiworkbench/`. |
+| `docs-build` | bun | `astro check && astro build` through turbo; output in `docs/dist/`. |
+| `docs-preview` | bun | Serve the built `docs/dist/` locally. |
+
+## Versions
+
+| Task | Env | Purpose |
+| --- | --- | --- |
+| `version` | bun | Print the workspace version from the manifest that owns it. |
+| `version-check` | bun | Assert every release manifest agrees. Part of `gates`. |
+| `version-set` | bun | Set the version in every manifest that carries a literal. |
+
+## Repository utilities
+
+| Task | Env | Purpose |
+| --- | --- | --- |
+| `lint-commit` | default | `convco check --from-stdin`, for the `commit-msg` hook. |
+| `changelog` / `changelog-preview` | default | Regenerate (or print) `CHANGELOG.md` from conventional commits. |
+| `lint-actions` | default | actionlint over `.github/workflows/`. Enforces SHA-pinned actions. |
+| `lint-toml` | default | taplo, scoped to `pixi.toml` and `.pixi-sandbox.toml` only. |
+
+## Python packages
+
+| Task | Env | Purpose |
+| --- | --- | --- |
+| `verify-packages` | default | Assert all three packages import from the root environment. |
+| `publish-plan` | default | `pixi publish --dry-run` — resolves the publish set without uploading. |
+| `publish-dist` | default | Build the publishable packages into `dist/`. |
+
+## Sandbox transport
+
+| Task | Env | Purpose |
+| --- | --- | --- |
+| `sandbox-plan` | default | Validate the reviewed publish plan. |
+| `sandbox-pack` | default | Pack the offline transport into `.sandbox-out/`. |
+| `sandbox-doctor` | default | Verify a packed transport without writing anything. |
+| `sandbox-publish` | default | Push the transport to its orphan branch. |
+| `sandbox-restore` | default | `bash scripts/restore.sh` — reconstruct offline. |
+
+## Agent tooling
+
+| Task | Env | Purpose |
+| --- | --- | --- |
+| `backlog` | bun | The Markdown task backlog. The `--` before arguments is required. |
+| `skills` | bun | Manage agent skills. |
+| `opencode-install` / `setup-opencode` | bun | Install `opencode` globally through bun and put it on `PATH`. |
+
+## Gates
+
+| Task | Env | Purpose |
+| --- | --- | --- |
+| `gates` | mixed | The single owner of *what must pass*. No network. |
+| `ci` | mixed | `scripts/ci.sh`: the producers, the order, and `gates`. What the pre-push hook and GitHub Actions run. |
+
+There is no `advisories` task. Three ecosystems would each need one — conda/pip,
+Bun, and the SHA-pinned GitHub Actions — and a task naming one of them reads as
+coverage of all three. It would also need the network, which is why it would sit
+outside `gates` even once it exists: a gate that fails because the network was
+unreachable trains people to ignore gates.

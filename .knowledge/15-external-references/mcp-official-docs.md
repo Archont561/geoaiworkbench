@@ -10,7 +10,7 @@ updated: 2026-09-11
 source_conversation_parts: [4, 7]
 related:
   - KB-15-fastmcp-docs
-  - KB-08-mcp-sdk-v2-migration
+  - backlog-decision-9
   - KB-00-glossary-terms
 authoritative: false
 implementation_status: specified
@@ -45,7 +45,7 @@ Curated links to authoritative MCP documentation. All URLs verified September 20
 - **Current version:** 2.2.0 (September 7, 2026)
 - **License:** MIT
 
-⚠️ **Breaking change:** SDK v2 (July 2026) is not backward compatible with v1. See [KB-08-mcp-sdk-v2-migration](../08-technology-decisions/mcp-sdk-v2-migration.md).
+⚠️ **Breaking change:** SDK v2 (July 2026) is not backward compatible with v1. See backlog `decision-9`.
 
 For GeoAIWorkbench: use standalone `fastmcp` v4.0.3 instead. See [KB-15-fastmcp-docs](fastmcp-docs.md).
 

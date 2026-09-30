@@ -1,0 +1,75 @@
+---
+title: Two pixi environments
+description: Why QGIS and bun cannot share one solve, what lives in each environment, and the nested-run rule that follows from the split.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+There are two Pixi environments, and the split is forced rather than tidy.
+
+```toml
+[environments]
+default = { features = ["qgis", "python-toolchain", "utils"] }
+bun     = { features = ["bun"] }
+```
+
+QGIS pins `icu 78.3`; bun pins `icu 75.1`; no `icu` satisfies both. One environment
+carrying both only ever solved because the QGIS floor had been pinned down to
+3.44.7 — which meant the JavaScript runtime was quietly deciding how old QGIS was
+allowed to be. Splitting them frees that floor. The constraint is recorded as `decision-2` in the backlog decision register
+(`pixi run backlog -- decision list`).
+
+| Environment | Carries | Used by |
+| --- | --- | --- |
+| `default` | QGIS, the Python 3.12 toolchain, ruff, pytest, convco, lefthook, actionlint, taplo | every Python task, the git instruments, the gate's non-JS half |
+| `bun` | bun, and nothing else | turbo, biome, backlog, skills, the docs site |
+
+## The rule that follows
+
+<Aside type="caution" title="A nested `pixi run` runs in the caller's environment">
+  The task's own `default-environment` is honoured on the outermost invocation only.
+  Measured on pixi 0.81.0.
+</Aside>
+
+| Invocation | Environment |
+| --- | --- |
+| `pixi run TASK`, from a bare shell | `TASK`'s `default-environment` |
+| `pixi run -e ENV TASK`, from anywhere | `ENV`, always |
+| `pixi run TASK`, from inside `ENV` | `ENV`, whatever `TASK` declares |
+| `depends-on = [{ task = …, environment = … }]` | the named environment, always |
+
+So three conventions hold everywhere in the repository:
+
+1. Every task declares the environment it needs (`default-environment = "bun"` for
+   anything that reaches bun).
+2. Every nested call names `-e`. `scripts/ci.sh` and every lefthook hook are nested
+   calls — git runs hooks in whatever environment the contributor happens to be in.
+3. Every `depends-on` entry uses the structured `{ task, environment }` form, the
+   only form immune to the caller's shell.
+
+Together they make the whole graph environment-determined: `-e` selects the *entry*
+task and nothing else, so `pixi run -e default gates` still runs turbo in `bun`.
+
+## Crossing the boundary
+
+The Python packages cross it themselves. Each `python/*/package.json` script is of
+the form:
+
+```json
+{
+  "test": "cd ../.. && pixi run -e default -- python -m pytest python/geoai-core/tests -q"
+}
+```
+
+Turbo exists only in `bun`; the interpreter and QGIS exist only in `default`. The
+`-e default` is what crosses that line, and the `cd ../..` is there because ruff's
+`src` and pytest's `testpaths` are declared relative to the repository root.
+
+## What turbo does *not* carry
+
+`turbo.json` has no `globalPassThroughEnv`, and that is deliberate. Turbo runs in
+`bun`, where QGIS's activation variables (`PYTHONPATH`, `QGIS_PREFIX_PATH`,
+`QT_QPA_PLATFORM`, `GDAL_DATA`, …) are not set in the first place — they are produced
+by activating `default`. Each Python package re-enters `default` on its own, so
+activation happens on its own terms. A pass-through list declared where those
+variables are unset is a list that does nothing and reads as though it does.

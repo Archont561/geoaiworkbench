@@ -14,10 +14,10 @@ related:
 authoritative: true
 implementation_status: complete
 llm_hints:
-  primary_purpose: "Complete master index of all 216 knowledge base files"
+  primary_purpose: "Complete master index of all 171 knowledge base files"
   key_facts:
     - "All 12 batches complete"
-    - "216 files across 16 directories"
+    - "171 files across 13 directories"
     - "Fully cross-referenced"
   common_questions:
     - "Where is the file about topic X?"
@@ -26,7 +26,8 @@ llm_hints:
 
 # Knowledge Base Master Index — COMPLETE
 
-**Status:** All 12 batches complete. 216 files total.
+**Status:** All 12 batches complete. 192 files: the 24 decision files moved to
+backlog (see *What is NOT in this tree* below).
 
 ## Batch Completion
 
@@ -39,12 +40,12 @@ llm_hints:
 | 5 | Architecture | ✅ | 12 |
 | 6 | MCP Tools | ✅ | 21 |
 | 7 | Implementation | ✅ | 18 |
-| 8 | Tooling + Decisions | ✅ | 25 |
+| 8 | Tooling | ✅ | 13 |
 | 9 | Testing + Security | ✅ | 20 |
 | 10 | Thesis + Tasks | ✅ | 23 |
 | 11 | Roadmap | ✅ | 10 |
-| 12 | Decision Log + Index | ✅ | 12 |
-| **Total** | | **✅** | **212** |
+| 12 | Index | ✅ | 4 |
+| **Total** | | **✅** | **171** |
 
 ## By Directory
 
@@ -52,7 +53,7 @@ llm_hints:
 - [README.md](README.md) — Entry point
 - [INDEX.md](INDEX.md) — This file
 - [GLOSSARY.md](GLOSSARY.md) — Acronyms and terms
-- [CHANGELOG.md](CHANGELOG.md) — Decision evolution
+- [CHANGELOG.md](CHANGELOG.md) — How the design evolved
 
 ### 00-meta/ (5)
 - [project-overview.md](00-meta/project-overview.md) — 3-condition experiment
@@ -92,7 +93,8 @@ llm_hints:
 - [error-taxonomy.md](03-metrics/error-taxonomy.md)
 - [statistical-tests.md](03-metrics/statistical-tests.md)
 
-### 04-architecture/ (12)
+### 04-architecture/ (13)
+- [protocol-stack.md](04-architecture/protocol-stack.md) — MCP vs ACP vs A2A
 - [system-architecture.md](04-architecture/system-architecture.md)
 - [package-qgis-utils.md](04-architecture/package-qgis-utils.md)
 - [package-geoaiworkbench.md](04-architecture/package-geoaiworkbench.md)
@@ -147,19 +149,6 @@ llm_hints:
 - [infrastructure-libraries.md](07-tooling/infrastructure-libraries.md)
 - [tools-to-avoid.md](07-tooling/tools-to-avoid.md)
 
-### 08-technology-decisions/ (12)
-- [mcp-sdk-v2-migration.md](08-technology-decisions/mcp-sdk-v2-migration.md)
-- [fastmcp-standalone.md](08-technology-decisions/fastmcp-standalone.md)
-- [pixi-vs-uv.md](08-technology-decisions/pixi-vs-uv.md)
-- [qgis-version-3.44.md](08-technology-decisions/qgis-version-3.44.md)
-- [protocol-stack-clarification.md](08-technology-decisions/protocol-stack-clarification.md)
-- [cli-agent-selection.md](08-technology-decisions/cli-agent-selection.md)
-- [black-box-vs-instrumented.md](08-technology-decisions/black-box-vs-instrumented.md)
-- [separate-process-decision.md](08-technology-decisions/separate-process-decision.md)
-- [pydantic-v2-choice.md](08-technology-decisions/pydantic-v2-choice.md)
-- [polars-vs-pandas.md](08-technology-decisions/polars-vs-pandas.md)
-- [duckdb-vs-sqlite.md](08-technology-decisions/duckdb-vs-sqlite.md)
-- [decision-tool-count.md](08-technology-decisions/decision-tool-count.md)
 
 ### 09-testing/ (11)
 - [testing-strategy.md](09-testing/testing-strategy.md) — TDD, 202+ tests
@@ -210,9 +199,6 @@ llm_hints:
 - [week1-foundation.md](13-roadmap/week1-foundation.md) through [week8-analysis-writing.md](13-roadmap/week8-analysis-writing.md) (8 weeks)
 - [critical-path.md](13-roadmap/critical-path.md)
 
-### 14-decisions-log/ (12)
-- [all-decisions-summary.md](14-decisions-log/all-decisions-summary.md) — 20 decisions
-- 11 individual decision files
 
 ### 15-external-references/ (6)
 - [mcp-official-docs.md](15-external-references/mcp-official-docs.md)
@@ -221,6 +207,24 @@ llm_hints:
 - [cli-agent-docs.md](15-external-references/cli-agent-docs.md)
 - [pixi-docs.md](15-external-references/pixi-docs.md)
 - [github-repositories.md](15-external-references/github-repositories.md)
+
+## What is NOT in this tree
+
+Two kinds of content were moved out of the knowledge base and into
+[backlog](../backlog/), which can represent them as first-class objects with
+status and cross-links, where this tree could only describe them:
+
+| Content | Was | Is now |
+|---|---|---|
+| Technology choices and the master decision log | `08-technology-decisions/` (12 files), `14-decisions-log/` (12 files) | 17 backlog decisions — `pixi run backlog -- decision list` |
+| Go/no-go criteria for M1–M5 | the milestone section of `13-roadmap/critical-path.md` | 5 backlog milestones — `pixi run backlog -- milestone list` |
+| Actionable work in this repository | scattered through the phase and roadmap files | 13 backlog tasks — `pixi run backlog -- task list --plain` |
+
+`04-architecture/protocol-stack.md` survived the move because it is a taxonomy
+(MCP vs ACP vs A2A), not a decision. What stays here is everything backlog has
+no shape for: literature, specifications, metric definitions, architecture
+detail, tool specs, the weekly schedule, the glossary and external references.
+
 
 ## Quick Lookup by Topic
 
@@ -237,6 +241,6 @@ llm_hints:
 | Testing | [testing-strategy.md](09-testing/testing-strategy.md) |
 | Security | [security-overview.md](10-security/security-overview.md) |
 | Thesis writing | [thesis-structure.md](11-thesis/thesis-structure.md) |
-| Timeline | [two-month-roadmap.md](13-roadmap/two-month-roadmap.md) |
-| Decisions | [all-decisions-summary.md](14-decisions-log/all-decisions-summary.md) |
+| Timeline | [two-month-roadmap.md](13-roadmap/two-month-roadmap.md); milestones are in backlog (`pixi run backlog -- milestone list`) |
+| Decisions | **backlog**, not this tree: `pixi run backlog -- decision list` |
 | Bibliography | [bibliography-overview.md](01-literature/bibliography-overview.md) |
