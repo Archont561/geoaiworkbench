@@ -4,15 +4,13 @@ title: Pin the four CLI agents and their versions
 status: To Do
 assignee: []
 created_date: '2026-09-30 21:44'
-updated_date: '2026-09-30 21:45'
+updated_date: '2026-09-30 21:53'
 labels:
   - orchestration
   - reproducibility
 milestone: m-2
 dependencies: []
 documentation:
-  - .knowledge/08-technology-decisions/cli-agent-selection.md
-  - .knowledge/14-decisions-log/decision-agent-pool.md
   - .knowledge/15-external-references/cli-agent-docs.md
 priority: high
 ordinal: 10000

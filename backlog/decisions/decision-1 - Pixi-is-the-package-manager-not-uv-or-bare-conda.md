@@ -16,4 +16,4 @@ Pixi is the package manager. conda-forge supplies the native stack, PyPI package
 
 `pixi.toml` becomes the single owner of environments and tasks, and `pixi.lock` becomes the definition of a reproducible run. Reversible at moderate cost. Realised in this repository: see TASK-1, `pixi.toml` and `scripts/ci.sh`.
 
-Source: `.knowledge/08-technology-decisions/pixi-vs-uv.md`, `.knowledge/14-decisions-log/decision-pixi.md`.
+Supersedes `.knowledge/08-technology-decisions/pixi-vs-uv.md`, `.knowledge/14-decisions-log/decision-pixi.md` — deleted from the knowledge base; this decision is that content.

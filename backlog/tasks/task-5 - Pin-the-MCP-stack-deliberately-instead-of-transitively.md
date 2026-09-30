@@ -4,15 +4,15 @@ title: Pin the MCP stack deliberately instead of transitively
 status: To Do
 assignee: []
 created_date: '2026-09-30 21:44'
-updated_date: '2026-09-30 21:45'
+updated_date: '2026-09-30 21:53'
 labels:
   - orchestration
   - environment
 milestone: m-0
 dependencies: []
 documentation:
-  - .knowledge/08-technology-decisions/fastmcp-standalone.md
-  - .knowledge/08-technology-decisions/mcp-sdk-v2-migration.md
+  - .knowledge/07-tooling/dependencies-rationale.md
+  - .knowledge/07-tooling/phase1-development.md
 priority: high
 ordinal: 5000
 ---

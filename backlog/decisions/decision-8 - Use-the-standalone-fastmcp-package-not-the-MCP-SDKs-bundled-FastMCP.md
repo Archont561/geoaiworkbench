@@ -16,4 +16,4 @@ Use standalone `fastmcp>=4.0,<5`: the bare `@mcp.tool` decorator, `mcp.run()` fo
 
 Imports come from `fastmcp`, never `mcp.server.fastmcp`. The dependency must be declared in `pixi.toml` deliberately rather than arriving transitively.
 
-Source: `.knowledge/08-technology-decisions/fastmcp-standalone.md`.
+Supersedes `.knowledge/08-technology-decisions/fastmcp-standalone.md` — deleted from the knowledge base; this decision is that content.

@@ -4,7 +4,7 @@ title: Add a mcp server entry point to geoai-mcp
 status: To Do
 assignee: []
 created_date: '2026-09-30 19:52'
-updated_date: '2026-09-30 21:45'
+updated_date: '2026-09-30 21:53'
 labels:
   - feature
 milestone: m-1
@@ -13,7 +13,6 @@ dependencies:
 documentation:
   - .knowledge/05-mcp-tools/tool-spec-overview.md
   - .knowledge/05-mcp-tools/server-instructions.md
-  - .knowledge/08-technology-decisions/fastmcp-standalone.md
 priority: medium
 ordinal: 2000
 ---

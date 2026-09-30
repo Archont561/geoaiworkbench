@@ -16,4 +16,4 @@ Stay on standalone fastmcp v4 (decision-8). If a legacy SDK path is ever needed,
 
 The `mcp` package currently present in the `default` environment arrived as a transitive dependency at 1.30.0; that pin is accidental and should be made intentional.
 
-Source: `.knowledge/08-technology-decisions/mcp-sdk-v2-migration.md`.
+Supersedes `.knowledge/08-technology-decisions/mcp-sdk-v2-migration.md` — deleted from the knowledge base; this decision is that content.

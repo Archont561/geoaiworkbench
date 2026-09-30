@@ -9,7 +9,7 @@ created: 2026-09-10
 updated: 2026-09-11
 source_conversation_parts: [4, 7]
 related:
-  - KB-08-cli-agent-selection
+  - backlog-decision-6
   - KB-15-github-repositories
 authoritative: false
 implementation_status: specified
@@ -89,7 +89,7 @@ Empty `mcp` section, PyQGIS available via subprocess:
 
 #### ACP vs A2A
 
-`opencode acp` uses **ACP (Agent Client Protocol)**, NOT A2A. See [KB-08-protocol-stack-clarification](../08-technology-decisions/protocol-stack-clarification.md).
+`opencode acp` uses **ACP (Agent Client Protocol)**, NOT A2A. See [KB-04-protocol-stack](../04-architecture/protocol-stack.md).
 
 ### Claude Code
 
@@ -331,6 +331,6 @@ Exact versions recorded in every JSONL trajectory event.
 
 ## Related
 
-- **Selection rationale:** [KB-08-cli-agent-selection](../08-technology-decisions/cli-agent-selection.md)
-- **Protocol clarification:** [KB-08-protocol-stack-clarification](../08-technology-decisions/protocol-stack-clarification.md)
+- **Selection rationale:** backlog `decision-6`
+- **Protocol clarification:** [KB-04-protocol-stack](../04-architecture/protocol-stack.md)
 - **GitHub URLs:** [KB-15-github-repositories](github-repositories.md)

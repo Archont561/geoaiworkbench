@@ -16,4 +16,5 @@ Three conditions: MCP-5 (tiers 1-2), MCP-15 (tiers 1-5) and CodeGen (unlimited).
 
 5 and 15 both sit below the reported degradation threshold, which is deliberate: the design samples the rising part of the inverted-U rather than its collapse. `GEOMCP_TIER` becomes a load-bearing environment variable that the tier tests must pin.
 
-Source: `.knowledge/08-technology-decisions/decision-tool-count.md`, `.knowledge/05-mcp-tools/three-condition-experiment.md`.
+Source: `.knowledge/05-mcp-tools/three-condition-experiment.md`.
+Supersedes `.knowledge/08-technology-decisions/decision-tool-count.md` — deleted from the knowledge base; this decision is that content.

@@ -16,4 +16,4 @@ DuckDB >= 1.1, querying the JSONL directly with `read_json_auto`. JSONL stays th
 
 No import step means no second copy of the results that can drift from the first. DuckDB becomes an analysis-environment dependency this repository must declare.
 
-Source: `.knowledge/08-technology-decisions/duckdb-vs-sqlite.md`.
+Supersedes `.knowledge/08-technology-decisions/duckdb-vs-sqlite.md` — deleted from the knowledge base; this decision is that content.

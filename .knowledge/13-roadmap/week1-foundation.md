@@ -52,7 +52,12 @@ Day 5: Write project README; document .knowledge/ Batch 1-3; verify all 26 tests
 
 ## Success Criteria
 
-pixi run test passes; QGIS 3.44 confirmed; CI green
+This week closes backlog milestone `m-0` (M1 Environment ready). The criteria are the
+milestone's, so they are kept there rather than restated here:
+
+```
+pixi run backlog -- milestone list
+```
 
 ## TDD Cycle
 

@@ -10,7 +10,7 @@ updated: 2026-09-11
 source_conversation_parts: [4, 7]
 related:
   - KB-15-mcp-official-docs
-  - KB-08-fastmcp-standalone
+  - backlog-decision-8
   - KB-06-geo-mcp-server
 authoritative: false
 implementation_status: specified
@@ -234,7 +234,7 @@ Supported via mount points. Not used in GeoMCP.
 
 ## Why GeoAIWorkbench Uses Standalone FastMCP
 
-See [KB-08-fastmcp-standalone](../08-technology-decisions/fastmcp-standalone.md) for full rationale.
+See backlog `decision-8` for full rationale.
 
 Summary:
 1. Matches original design intent (before MCP SDK v2 breaking changes)

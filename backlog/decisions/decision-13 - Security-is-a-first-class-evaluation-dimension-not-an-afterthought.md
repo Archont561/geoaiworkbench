@@ -16,4 +16,5 @@ Security is a first-class dimension: research question PB5, Layer 7 of the metri
 
 The largest structural difference between the paradigms — CodeGen executes arbitrary PyQGIS, MCP executes validated calls — now carries a cost rather than reading as pure flexibility. The paradigm boundary (no `execute_code` tool, ever) becomes an invariant with a test attached.
 
-Source: `.knowledge/14-decisions-log/decision-security-dim.md`, `.knowledge/10-security/security-overview.md`, `.knowledge/14-decisions-log/decision-adversarial-tasks.md`.
+Source: `.knowledge/10-security/security-overview.md`.
+Supersedes `.knowledge/14-decisions-log/decision-security-dim.md` — deleted from the knowledge base; this decision is that content.

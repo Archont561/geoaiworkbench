@@ -11,7 +11,7 @@ source_conversation_parts: [7, 15]
 related:
   - KB-07-toolchain-overview
   - KB-15-pixi-docs
-  - KB-08-pixi-vs-uv
+  - backlog-decision-1
 authoritative: true
 implementation_status: specified
 llm_hints:
@@ -42,4 +42,4 @@ pixi install; pixi run test; docker run qgis/qgis
 
 - KB-07-toolchain-overview
 - KB-15-pixi-docs
-- KB-08-pixi-vs-uv
+- backlog-decision-1

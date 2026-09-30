@@ -16,4 +16,5 @@ Run the MCP server as its own process and talk to QGIS over IPC. The existing qg
 
 Crash isolation comes for free: a QGIS segfault no longer takes the server with it. The cost is a transport to define, a second process to supervise, and a bridge to test. Blocks TASK-2.
 
-Source: `.knowledge/08-technology-decisions/separate-process-decision.md`, `.knowledge/04-architecture/separate-process-architecture.md`, `.knowledge/04-architecture/asyncio-in-qt.md`.
+Source: `.knowledge/04-architecture/separate-process-architecture.md`, `.knowledge/04-architecture/asyncio-in-qt.md`.
+Supersedes `.knowledge/08-technology-decisions/separate-process-decision.md` — deleted from the knowledge base; this decision is that content.

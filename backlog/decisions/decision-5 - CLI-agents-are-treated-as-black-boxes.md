@@ -16,4 +16,5 @@ Agents are observed from the outside only: MCP logs and output files, plus gener
 
 Some questions become unanswerable — token-level reasoning, internal retries the agent does not surface. In exchange the design matches real deployment and a fifth agent costs a config file rather than a port.
 
-Source: `.knowledge/08-technology-decisions/black-box-vs-instrumented.md`, `.knowledge/02-research-design/black-box-constraint.md`.
+Source: `.knowledge/02-research-design/black-box-constraint.md`.
+Supersedes `.knowledge/08-technology-decisions/black-box-vs-instrumented.md` — deleted from the knowledge base; this decision is that content.

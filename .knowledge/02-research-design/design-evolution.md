@@ -11,7 +11,7 @@ source_conversation_parts: [2, 15]
 related:
   - KB-02-final-research-design
   - KB-CHANGELOG
-  - KB-14-all-decisions-summary
+  - backlog-decision-register
 authoritative: true
 implementation_status: specified
 llm_hints:
@@ -126,4 +126,4 @@ Chronological evolution of the GeoAIWorkbench research design from initial idea 
 
 - [KB-02-final-research-design](final-research-design.md) — Complete design specification
 - [KB-CHANGELOG](../CHANGELOG.md) — Detailed decision log
-- [KB-14-all-decisions-summary](../14-decisions-log/all-decisions-summary.md) — Decision table
+- the backlog decision register (`backlog decision list`) — Decision table

@@ -103,8 +103,10 @@ The prose lives in three places, and they do not overlap:
   requests build it without publishing. See [`docs/README.md`](docs/README.md).
 - **`AGENTS.md`** — why the configuration is shaped the way it is. Read it before
   changing any of it.
-- **`.knowledge/`** — 216 files of research design, metrics and tool specifications.
-  The site summarises them; it does not replace them.
+- **`.knowledge/`** — 171 files of research design, metrics and tool specifications.
+  The site summarises them; it does not replace them. Decisions, milestones and
+  tasks are not in there — they are in [`backlog/`](backlog/), reachable with
+  `pixi run backlog -- decision list` (and `milestone list`, `task list --plain`).
 
 ## Development
 

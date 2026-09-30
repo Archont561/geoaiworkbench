@@ -52,7 +52,12 @@ Day 6-7: Buffer days for re-runs, crash recovery, data validation; MILESTONE M5
 
 ## Success Criteria
 
-202 tests (no new)|1,800 runs in results.jsonl; completed.json shows all keys; no missing data
+This week closes backlog milestone `m-4` (M5 Experiment complete). The criteria are the
+milestone's, so they are kept there rather than restated here:
+
+```
+pixi run backlog -- milestone list
+```
 
 ## TDD Cycle
 

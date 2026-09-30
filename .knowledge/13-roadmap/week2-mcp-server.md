@@ -52,7 +52,12 @@ Day 5: Write integration tests for tool execution with mock QGIS; verify MCP Ins
 
 ## Success Criteria
 
-15 tools registered; GEOMCP_TIER=5→5 tools, =15→15 tools; paradigm boundary passes; MCP Inspector shows all tools
+This week closes backlog milestone `m-1` (M2 MCP server complete). The criteria are the
+milestone's, so they are kept there rather than restated here:
+
+```
+pixi run backlog -- milestone list
+```
 
 ## TDD Cycle
 

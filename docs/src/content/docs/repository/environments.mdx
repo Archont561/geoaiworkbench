@@ -16,8 +16,8 @@ bun     = { features = ["bun"] }
 QGIS pins `icu 78.3`; bun pins `icu 75.1`; no `icu` satisfies both. One environment
 carrying both only ever solved because the QGIS floor had been pinned down to
 3.44.7 — which meant the JavaScript runtime was quietly deciding how old QGIS was
-allowed to be. Splitting them frees that floor. The constraint is recorded in
-`.knowledge/08-technology-decisions/qgis-version-3.44.md`.
+allowed to be. Splitting them frees that floor. The constraint is recorded as `decision-2` in the backlog decision register
+(`pixi run backlog -- decision list`).
 
 | Environment | Carries | Used by |
 | --- | --- | --- |

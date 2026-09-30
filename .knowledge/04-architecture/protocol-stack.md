@@ -1,5 +1,5 @@
 ---
-id: KB-08-protocol-stack-clarification
+id: KB-04-protocol-stack
 title: "Decision: MCP vs ACP vs A2A Protocol Stack"
 category: technology-decisions
 subcategory: decision
@@ -9,7 +9,7 @@ created: 2026-09-11
 updated: 2026-09-11
 source_conversation_parts: [7, 15]
 related:
-  - KB-14-all-decisions-summary
+  - backlog-decision-register
   - KB-01-ehtesham-et-al-2025
   - KB-01-mcp-spec
   - KB-01-acp-spec

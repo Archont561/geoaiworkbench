@@ -9,7 +9,7 @@ created: 2026-09-10
 updated: 2026-09-11
 source_conversation_parts: [7]
 related:
-  - KB-08-pixi-vs-uv
+  - backlog-decision-1
   - KB-07-pixi-guide
   - KB-06-pyproject-toml
 authoritative: false
@@ -91,7 +91,7 @@ fastmcp = ">=4,<5"
 1. Pixi solves Conda dependencies via `rattler`
 2. Pixi solves PyPI dependencies via internal `uv` given the Conda-solved Python
 
-**Best practice:** Prefer Conda packages when available (e.g., `shapely`, `rasterio`, `geopandas` are all on conda-forge). See [KB-08-pixi-vs-uv](../08-technology-decisions/pixi-vs-uv.md).
+**Best practice:** Prefer Conda packages when available (e.g., `shapely`, `rasterio`, `geopandas` are all on conda-forge). See backlog `decision-1`.
 
 ## Commands
 
@@ -265,7 +265,7 @@ Useful for distributing pre-built benchmark environments.
 | Native + Python | ✅ (best fit) | ❌ | ✅ | ❌ |
 | Task env vars (for GEOMCP_TIER) | ✅ | ❌ | ❌ | ⚠️ |
 
-For GeoAIWorkbench (native + Python + tier control), Pixi is the clear winner. See [KB-08-pixi-vs-uv](../08-technology-decisions/pixi-vs-uv.md).
+For GeoAIWorkbench (native + Python + tier control), Pixi is the clear winner. See backlog `decision-1`.
 
 ## Common Issues
 
@@ -294,7 +294,7 @@ For GeoAIWorkbench (native + Python + tier control), Pixi is the clear winner. S
 
 - **GeoAIWorkbench pyproject.toml:** [KB-06-pyproject-toml](../06-implementation/pyproject-toml.md)
 - **Pixi guide for this project:** [KB-07-pixi-guide](../07-tooling/pixi-guide.md)
-- **Rationale (Pixi vs uv):** [KB-08-pixi-vs-uv](../08-technology-decisions/pixi-vs-uv.md)
+- **Rationale (Pixi vs uv):** backlog `decision-1`
 
 ## Community
 

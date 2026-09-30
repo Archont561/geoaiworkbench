@@ -16,4 +16,4 @@ Primary pool: OpenCode (native MCP, `opencode.json`, ACP headless), Claude Code 
 
 The agent pool is part of the reproducibility claim: an unpinned agent version silently changes the experiment. Only `opencode-ai` is pinned in this repository today; the other three are not.
 
-Source: `.knowledge/08-technology-decisions/cli-agent-selection.md`, `.knowledge/14-decisions-log/decision-agent-pool.md`.
+Supersedes `.knowledge/08-technology-decisions/cli-agent-selection.md`, `.knowledge/14-decisions-log/decision-agent-pool.md` — deleted from the knowledge base; this decision is that content.

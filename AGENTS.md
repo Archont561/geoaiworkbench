@@ -21,8 +21,8 @@ There are two Pixi environments. `default` carries QGIS, the Python toolchain an
 instruments; `bun` carries bun and nothing else. This is a solve constraint, not tidiness:
 QGIS and bun pin incompatible `icu` (75.1 versus 78.3), so one environment carrying both
 only solved because the QGIS floor was pinned down to 3.44.7. The floor is free to move
-now. That constraint is recorded in
-`.knowledge/08-technology-decisions/qgis-version-3.44.md`.
+now. That constraint is recorded as `decision-2` in the backlog decision register
+(`pixi run backlog -- decision list`).
 
 **A nested `pixi run TASK` runs in the environment it was called from.** The task's own
 `default-environment` is honoured on the outermost invocation only. Measured on pixi

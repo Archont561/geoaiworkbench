@@ -4,6 +4,7 @@ title: Declare the analysis toolchain in pixi.toml
 status: To Do
 assignee: []
 created_date: '2026-09-30 21:44'
+updated_date: '2026-09-30 21:53'
 labels:
   - orchestration
   - environment
@@ -12,8 +13,6 @@ dependencies: []
 documentation:
   - .knowledge/07-tooling/phase4-analysis.md
   - .knowledge/03-metrics/statistical-tests.md
-  - .knowledge/08-technology-decisions/duckdb-vs-sqlite.md
-  - .knowledge/08-technology-decisions/polars-vs-pandas.md
 priority: medium
 ordinal: 4000
 ---

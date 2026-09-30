@@ -16,4 +16,5 @@ Target `>=3.40` with primary testing on 3.44.x, flexible in `pixi.toml` and exac
 
 Every task must declare the environment it needs, every nested `pixi run` must name `-e`, and the offline transport must pack both environments or restore a machine that cannot run turbo. Implemented: TASK-1 (Done).
 
-Source: `.knowledge/08-technology-decisions/qgis-version-3.44.md`, `AGENTS.md`.
+Source: `AGENTS.md`.
+Supersedes `.knowledge/08-technology-decisions/qgis-version-3.44.md` — deleted from the knowledge base; this decision is that content.

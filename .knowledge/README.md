@@ -17,8 +17,8 @@ implementation_status: specified
 llm_hints:
   primary_purpose: "Entry point and navigation guide for the knowledge base"
   key_facts:
-    - "16 top-level directories organized by concern"
-    - "216 files total across all batches (updated for MCP-15)"
+    - "13 top-level directories organized by concern"
+    - "171 files; decisions and milestones live in backlog, not here"
     - "Every file has YAML frontmatter with unique ID"
     - "IDs follow KB-NN-slug format"
     - "3-condition experiment: MCP-5, MCP-15, CodeGen"
@@ -31,7 +31,7 @@ llm_hints:
 
 # GeoAIWorkbench Knowledge Base
 
-This directory captures the complete design, implementation plan, decisions, and rationale of the **GeoAIWorkbench** master's thesis project. It exists so that any LLM (or human) can reconstruct full context without re-asking questions that have already been answered.
+This directory captures the design, implementation plan and rationale of the **GeoAIWorkbench** master's thesis project. Decisions, milestones and actionable work are *not* here: they are backlog objects (`pixi run backlog -- decision list`, `milestone list`, `task list --plain`), because backlog can give them status and cross-links that a flat file tree cannot. It exists so that any LLM (or human) can reconstruct full context without re-asking questions that have already been answered.
 
 ## Purpose
 
@@ -49,7 +49,7 @@ Start here:
 
 1. **[INDEX.md](INDEX.md)** — Complete file listing with cross-references
 2. **[GLOSSARY.md](GLOSSARY.md)** — All acronyms and technical terms
-3. **[CHANGELOG.md](CHANGELOG.md)** — Evolution of decisions over time
+3. **[CHANGELOG.md](CHANGELOG.md)** — How the design got here (the decisions themselves are in backlog: `pixi run backlog -- decision list`)
 4. **[00-meta/project-overview.md](00-meta/project-overview.md)** — High-level project description
 
 Then explore by concern:
@@ -64,13 +64,11 @@ Then explore by concern:
 | `05-mcp-tools/` | Full MCP tool specifications (Tier 1-5), annotations, tier control |
 | `06-implementation/` | File-by-file implementation guides |
 | `07-tooling/` | Complete toolchain by project phase |
-| `08-technology-decisions/` | Key technology choice rationales |
 | `09-testing/` | TDD roadmap, test inventory, adversarial tests |
 | `10-security/` | Threat taxonomy, mitigations, workspace scoping |
 | `11-thesis/` | Chapter outlines, LaTeX setup, appendices |
 | `12-tasks-benchmark/` | GeoAnalystBench adaptation, task schema, tool tier mapping |
-| `13-roadmap/` | 8-week TDD roadmap, milestones, critical path |
-| `14-decisions-log/` | Master decision log with rationale |
+| `13-roadmap/` | 8-week TDD roadmap and critical path (milestones live in backlog) |
 | `15-external-references/` | Links to external documentation |
 
 ## Frontmatter Schema
@@ -105,7 +103,7 @@ llm_hints:
 
 - `KB-NN-slug` where `NN` is the batch/directory number
 - Slug is kebab-case, matches filename without extension
-- Examples: `KB-05-tool-buffer`, `KB-01-luo-et-al-2026`, `KB-14-decision-pixi`
+- Examples: `KB-05-tool-buffer`, `KB-01-luo-et-al-2026`, `backlog-decision-1`
 
 ## Status Levels
 

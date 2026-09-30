@@ -16,4 +16,5 @@ Use mature libraries for commodity infrastructure — diskcache, tenacity, struc
 
 Ten infrastructure dependencies enter the manifest, each of which must be declared and locked here. The rule that follows: if a package exists and is maintained, a hand-rolled version of it is not a contribution.
 
-Source: `.knowledge/14-decisions-log/decision-infrastructure-libs.md`, `.knowledge/07-tooling/infrastructure-libraries.md`.
+Source: `.knowledge/07-tooling/infrastructure-libraries.md`.
+Supersedes `.knowledge/14-decisions-log/decision-infrastructure-libs.md` — deleted from the knowledge base; this decision is that content.
