@@ -1,7 +1,8 @@
 # Reviewed publish plan consumed by `pixi-sandbox plan` and the release-binary reusable
-# workflow. Add a target only after its native runner has passed the airlock proof; a
-# new target lands as a PR that must stay red-free on its own runner before it is
-# merged, so the gate is the review rather than the edit.
+# workflow. There is no CI workflow that proves a transport offline any more: pixi-sandbox
+# owns the transport, so `pixi run sandbox-pack` followed by `pixi run sandbox-doctor`
+# (which verifies every declared byte with `--verify`) is the check, and it is a task
+# anyone can run rather than a second workflow to keep in step with this file.
 #
 # `cargo_vendor = false` — the one setting here that differs from the reference
 # repositories. This project has no Cargo workspace, so there is nothing to vendor, and
@@ -10,18 +11,20 @@
 # repository's actual content are one decision; if a Rust crate is ever added, this
 # becomes `true` in the same commit that adds the crate.
 #
-# `environments = ["default"]` — one environment. The root pixi.toml has a single
-# environment today because QGIS and bun share an icu solve (see its header); splitting
-# them is a backlog task, and until it lands there is exactly one environment to pack.
-# When the split happens, this becomes `["default", "bun"]` and the publish workflow's
-# path filter picks up nothing new — the plan is what changes, and the workflow reads it.
+# `environments = ["default", "bun"]` — both environments, because the root pixi.toml
+# has both: `default` carries QGIS and the Python toolchain, `bun` carries the
+# JavaScript runtime, and the two cannot share one solve (their icu pins disagree —
+# see the header of pixi.toml). A transport that packed only one would restore a
+# machine that cannot run turbo, which is the same as no restore. The publish
+# workflow's path filter picks up nothing new for this: the plan is what changes, and
+# the workflow reads it.
 schema = 1
 branch_prefix = "sandbox"
 cargo_vendor = false
 
 [[bundle]]
 name = "developer"
-environments = ["default"]
+environments = ["default", "bun"]
 # linux-64 only, matching `[workspace] platforms` in pixi.toml. The plan must stay a
 # subset of the workspace's platform list: pixi-sandbox's `plan` fans a matrix out onto
 # each named platform's native runner, and a platform the environment was never solved

@@ -10,10 +10,14 @@
 # every-commit check affordable here at all — the untargeted form of the same
 # checks walks a 2.9 GB .pixi tree if it is not told what to look at.
 #
-# Note the single environment. The reference repository this follows splits its
-# tasks across `-e default` and `-e bun`; here QGIS and bun share one conda solve
-# (see pixi.toml), so every task is a plain `pixi run` and there is no `-e` to
-# get wrong.
+# Two environments, so every `pixi run` here names one. There is a `bun`
+# environment (turbo, biome, the agent CLIs) and a `default` one (QGIS, pytest, ruff,
+# convco, taplo, actionlint) — see pixi.toml. The `-e` is not decoration: git runs
+# these hooks with whatever environment the contributor happens to be in, and pixi
+# resolves an unqualified `pixi run` in the ambient one. A hook that said
+# `pixi run lint-toml` would work for everyone whose shell happens to be in `default`
+# and fail for everyone in `pixi shell -e bun`, which is the kind of bug that only
+# reproduces on the machine it was written on.
 
 min_version: "2.0.0"
 
@@ -27,24 +31,28 @@ pre-commit:
       # is more likely to be wrong than it is to be fast. The staged files still
       # gate *whether* the hook wakes at all.
       glob: "python/**/*.py"
-      run: bash -c 'cd python && for pkg in geoai-core geoai-mcp geoai-bench; do (cd "$pkg" && ruff check --fix . && ruff format .); done'
+      # `pixi run -e default --`, not a bare `bash -c`: ruff lives in `default`, and
+      # git runs this hook with whatever PATH the contributor has. Calling the
+      # binary directly made the hook pass or fail on the caller's shell, which is
+      # the same trap the `-e` rule above exists to close.
+      run: pixi run -e default -- bash -c 'cd python && for pkg in geoai-core geoai-mcp geoai-bench; do (cd "$pkg" && ruff check --fix . && ruff format .); done'
 
     - name: toml-fmt
       # Only pixi.toml and .pixi-sandbox.toml are in taplo's canonical form; the
       # rest of the repository uses the aligned-`=` style deliberately, so the
       # hook is scoped to what taplo owns (see `lint-toml` in pixi.toml).
       glob: "{pixi.toml,.pixi-sandbox.toml}"
-      run: pixi run -- lint-toml {staged_files}
+      run: pixi run -e default -- lint-toml {staged_files}
 
     - name: js-biome
-      # Whole-repo enforcement is `pixi run lint-js` in `gates`; this is the
+      # Whole-repo enforcement is `pixi run -e bun lint-js` in `gates`; this is the
       # staged-file form, same global biome config, focused output.
       glob: "*.{js,ts,mts,mjs,cjs,json,jsonc,css}"
-      run: pixi run -- fmt-js
+      run: pixi run -e bun -- fmt-js
 
     - name: workflows
       glob: ".github/workflows/*.{yml,yaml}"
-      run: pixi run lint-actions
+      run: pixi run -e default lint-actions
 
     - name: shell-syntax
       # `bash -n` parses without executing. A syntax error in a hook that runs on
@@ -61,8 +69,17 @@ pre-commit:
       run: bash -c 'chmod +x scripts/*.sh'
 
     - name: merge-conflict
+      # `git grep --cached` over a `$(...)` list, for two reasons, both of which
+      # bit this hook when a backlog task was committed. Every Backlog.md file is
+      # named `task-N - Title.md`, and an unquoted expansion word-splits that into
+      # paths that do not exist: grep errored, `&& exit 1 || exit 0` turned the
+      # error into a pass, and the check was quietly doing nothing. And grepping
+      # the worktree is the wrong content — a partially staged file is checked at
+      # its unstaged state. `--cached` reads the index, which is what is about to be
+      # committed. The three exit codes are then worth separating: 0 is a marker
+      # (fail), 1 is clean (pass), anything else is a broken check (fail).
       glob: "*"
-      run: grep -IlE '^(<<<<<<<|>>>>>>>)( |$)' $(git diff --cached --name-only --diff-filter=ACM) && exit 1 || exit 0
+      run: bash -c 'out=$(git grep --cached -lE "^(<<<<<<<|>>>>>>>)( |$)"); case $? in 0) echo "$out"; exit 1;; 1) exit 0;; *) echo "git grep failed"; exit 1;; esac'
 
     - name: trailing-whitespace
       glob: "*"
@@ -73,7 +90,7 @@ commit-msg:
     - name: convco
       # `{1}` is the file holding the proposed message (git's commit-msg hook
       # argument); `lint-commit` reads it from stdin.
-      run: pixi run lint-commit < {1}
+      run: pixi run -e default lint-commit < {1}
 
 pre-push:
   parallel: false

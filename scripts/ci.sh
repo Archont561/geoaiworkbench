@@ -17,6 +17,17 @@
 #   lints fail in seconds, so a malformed workflow should not be discovered after a
 #   pytest run and three path-source package builds. Coverage runs last because it is
 #   the slowest producer and its only output is an artefact.
+#
+# WHY EVERY CALL BELOW NAMES ITS ENVIRONMENT, AND WHY ONE OF THEM DOES NOT
+# There are two pixi environments: `bun` (turbo, biome, the agent CLIs) and `default`
+# (QGIS, pytest, ruff, convco, taplo, actionlint). This script is itself started by
+# `pixi run ci`, so it already runs inside one of them, and pixi resolves a *nested*
+# `pixi run TASK` in the environment it was called from — the task's own
+# `default-environment` is only honoured on the outermost, un-nested invocation.
+# An unqualified `pixi run cov` here would therefore reach for turbo in `default`,
+# where turbo does not exist, and fail naming a missing binary instead of a wrong
+# environment. `gates` is the exception that proves the rule: its `depends-on`
+# entries each name an environment, which makes it immune to the ambient one.
 set -euo pipefail
 # shellcheck source=scripts/lib.sh
 source "$(dirname "$0")/lib.sh"
@@ -28,7 +39,7 @@ for arg in "$@"; do
     --no-coverage) coverage=0 ;;
     --no-rewrite) rewrite=0 ;;
     -h | --help)
-      sed -n '2,17p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+      sed -n '2,30p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)
@@ -50,6 +61,8 @@ step() {
 # ── 1. the gate itself ─────────────────────────────────────────────────────────
 # lint (ruff, turbo fan-out) → lint-js (biome) → lint-toml (taplo) → lint-actions
 # (actionlint) → test → version-check → verify-packages → publish-plan.
+# Unqualified on purpose: every entry in `gates` names its environment, so this one
+# call is correct from inside either environment. See the header.
 step pixi run gates
 
 # ── 2. format drift ───────────────────────────────────────────────────────────
@@ -66,8 +79,8 @@ else
   # packages (ruff), `pixi run fmt-js` is biome over the repository's JSON and
   # TypeScript. Either alone leaves the other family's drift unrewritten and therefore
   # undetected by the diff below.
-  step pixi run fmt
-  step pixi run fmt-js
+  step pixi run -e bun fmt
+  step pixi run -e bun fmt-js
   if ! git diff --exit-code --quiet; then
     echo >&2
     echo "formatting drift — a formatter changed files that were not staged:" >&2
@@ -80,13 +93,13 @@ fi
 # `publish-plan` already resolved it; this is the step that produces the artefacts a
 # release would upload. Also the check that the hatchling backend can build a wheel
 # from a path source dependency, which resolution alone does not prove.
-step pixi run publish-dist
+step pixi run -e default publish-dist
 
 # ── 4. coverage ────────────────────────────────────────────────────────────────
 # Last, and outside `gates`: the slowest producer, and the only step whose output
 # exists to be uploaded rather than read.
 if [ "$coverage" -eq 1 ]; then
-  step pixi run cov
+  step pixi run -e bun cov
 fi
 
 printf '\n\033[1;32mgate passed\033[0m\n'

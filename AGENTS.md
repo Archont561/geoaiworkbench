@@ -15,18 +15,39 @@ Configuration and orchestration only. The three Python packages under `python/` 
 scaffolds: they carry manifests, imports and one version test each, and no benchmark
 logic. If you are about to add a feature, that is the wrong repository.
 
-## The one environment
+## Two environments, and the one rule about them
 
-There is exactly one Pixi environment, `default`, and it contains QGIS *and* bun. This
-is not tidiness — it is a solve constraint. QGIS pins `icu`, bun pins `icu75`, and the
-current QGIS build wants `icu75.1` while any newer one wants `icu78.3`. Splitting the
-environments is the right long-term move and is not done here; until it is, **do not
-raise the QGIS floor**. That constraint is recorded in
+There are two Pixi environments. `default` carries QGIS, the Python toolchain and the git
+instruments; `bun` carries bun and nothing else. This is a solve constraint, not tidiness:
+QGIS and bun pin incompatible `icu` (75.1 versus 78.3), so one environment carrying both
+only solved because the QGIS floor was pinned down to 3.44.7. The floor is free to move
+now. That constraint is recorded in
 `.knowledge/08-technology-decisions/qgis-version-3.44.md`.
 
-Because there is one environment, no Pixi task uses `-e`/`--environment`. If you split
-the environments, every task in `pixi.toml` and every hook in `lefthook.yml` needs
-reviewing at the same time.
+**A nested `pixi run TASK` runs in the environment it was called from.** The task's own
+`default-environment` is honoured on the outermost invocation only. Measured on pixi
+0.81.0, not assumed:
+
+| invocation | environment |
+| --- | --- |
+| `pixi run TASK`, from a bare shell | `TASK`'s `default-environment` |
+| `pixi run -e ENV TASK`, from anywhere | `ENV`, always |
+| `pixi run TASK`, from inside `ENV` | `ENV`, whatever `TASK` declares |
+| `depends-on = [{ task = …, environment = … }]` | the named environment, always |
+
+So: **every task declares the environment it needs** (`default-environment = "bun"` for
+anything that reaches bun), **every nested call names `-e`**, and **every `depends-on`
+entry is the structured `{ task, environment }` form**, which is the only form immune to
+the caller's shell. Together those make the whole graph environment-determined: `-e`
+selects the entry task and nothing else, so `pixi run -e default gates` still runs
+turbo in `bun`. `scripts/ci.sh` and every hook in `lefthook.yml` are nested calls — git
+runs hooks in whatever environment the contributor is in — so they all name `-e`.
+Without it the failure names a missing binary (`turbo: command not found`) rather than
+a wrong environment, which is a bad hour to spend.
+
+The Python packages cross the boundary themselves: `python/*/package.json` scripts are
+`pixi run -e default -- python -m pytest …`, because turbo exists only in `bun` and the
+interpreter only in `default`.
 
 Bun is the only JavaScript runtime. Invoke JS tools with `bun run` / `bun x`, never
 `node_modules/.bin/…` — every `.bin` entry has a `node` shebang this repository does not
@@ -40,15 +61,14 @@ JSON config files in this repository cannot carry the reasons for their own cont
 Both `turbo.json` and `biome.json` reject unknown top-level keys — `//`-prefixed
 "comment" keys are not a thing in either — so the reasoning is here instead.
 
-**`turbo.json` `globalPassThroughEnv`.** Turbo runs tasks in Strict Environment Mode,
-which filters the ambient environment down to the variables declared in `env` and
-`passThroughEnv`. That is the right default, and it silently breaks a Pixi workspace,
-because the variables QGIS needs are produced by *activation* rather than declared
-anywhere in this repository. Without that list, `pixi run test` fails with
-`ModuleNotFoundError: No module named 'qgis'` from inside turbo while the identical
-command run directly succeeds — and the error names the symptom rather than the cause.
-**Adding a variable to `[feature.qgis.activation.env]` in `pixi.toml` means adding it to
-`globalPassThroughEnv` too.**
+**`turbo.json` has no `globalPassThroughEnv`, and that is the point.** Turbo runs in the
+`bun` environment, where QGIS's activation variables (`PYTHONPATH`, `QGIS_PREFIX_PATH`,
+`QT_QPA_PLATFORM`, `GDAL_DATA`, …) are not set in the first place — they are produced by
+activating `default`. Each Python package re-enters `default` through its own
+`pixi run -e default -- …`, so activation happens on its own terms. The long
+`globalPassThroughEnv` list this repository used to carry existed because turbo and pytest
+shared one environment; restoring it would reintroduce a list of variables that are unset
+where it is declared.
 
 **`biome.json` `vcs.clientKind`.** The key is `clientKind`, not `client`, and the value
 must be given at all or Biome disables VCS integration with a diagnostic rather than
@@ -70,8 +90,8 @@ dead — and because nothing errors, it stays dead.
 the *environment*, not only on the source: QGIS's version, the ICU solve, and the
 active `PYTHONPATH` all change what a test observes without changing a line of Python.
 Turbo's hash covers neither. A cache hit would replay a result from a different solve.
-`build` is also uncached: it runs `pixi run verify-packages`, which is a statement about
-the environment rather than a build product.
+`build` is also uncached: it runs `pixi run -e default verify-packages`, which is a
+statement about the environment rather than a build product.
 
 ## The coverage data-file race
 
@@ -109,19 +129,26 @@ can act on.
 
 `.pixi-sandbox.toml` sets `cargo_vendor = false` because there is no Cargo workspace.
 That flag and the repository's actual content are one decision: if a Rust crate is ever
-added, it becomes `true` in the same commit that adds the crate.
+added, it becomes `true` in the same commit that adds the crate. The plan packs **both**
+environments, `["default", "bun"]`: a transport that restored only `default` would produce
+a machine that cannot run turbo, which is not a working environment.
 
 `.pixi-sandbox.toml`, `.github/workflows/publish-sandbox.yml`, `scripts/restore.sh` and
 `scripts/restore.ps1` are generated by `pixi-sandbox init github`. Regenerating means
 deleting all four and re-running the installer, then **reapplying the local edits marked
 `LOCAL` in each file's header**. Those edits are policy, not drift; do not lose them.
 
-The airlock proof (`scripts/airlock-gate.sh`, `.github/workflows/airlock.yml`) has two
-tiers and only the second is authoritative. Tier B runs with the network reachable;
-Tier A runs the identical gate under `unshare -n`. The reason is that
-`pixi install --offline` is a *request*, not an enforcement — over a live network a
-damaged prefix is quietly re-fetched and the command reports success. Do not let a
-green Tier B be described as proof of offline operation.
+The transport has exactly one CI workflow, `publish-sandbox.yml`, and it publishes rather
+than proves. Verification is pixi-sandbox's own: `pixi run sandbox-doctor` runs
+`doctor --verify` against a packed transport, which compares every declared byte. There is
+no second workflow that packs, restores and re-gates a throwaway copy, and there is no
+`scripts/airlock-gate.sh`; both were deleted because pixi-sandbox owns that surface and a
+duplicate of it is a second thing to keep in step with the plan. What is *not* reproduced
+anywhere now is the egress-denied run (`unshare -n`): `pixi install --offline` is a
+*request*, not an enforcement, so over a live network a damaged prefix is quietly
+re-fetched and the command reports success. If that proof is wanted back, it belongs as a
+`pixi run` task a human triggers, not as a workflow that quietly skips its authoritative
+tier on the triggers where `inputs` is null.
 
 ## Commit and PR conventions
 

@@ -274,7 +274,8 @@ if [ -f "$OUTPUT/.pixi/sandbox-env.sh" ]; then
   # which is boilerplate for a Rust project. This repository has no Cargo
   # workspace — `.pixi-sandbox.toml` sets `cargo_vendor = false` for exactly that
   # reason — so the equivalent smoke test is the harness console script and an
-  # offline `pixi install`, which is what `scripts/airlock-gate.sh` runs.
+  # offline `pixi install`. `--all` because the plan packs two environments and a
+  # bare `pixi install` restores only `default`, which has no JavaScript runtime.
   echo "Try: pixi --version; geoai-bench; pixi install --frozen --offline"
 else
   echo "restore complete but no sandbox-env.sh found"

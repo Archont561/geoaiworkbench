@@ -17,7 +17,7 @@
   "containerEnv": {
     // QGIS needs this even on a container with no display: without it QApplication
     // tries to open a real one and the process aborts with a Qt message rather than
-    // a Python exception. The airlock gate sets it too, for the same reason.
+    // a Python exception. pixi.toml's qgis feature activation sets it too.
     "QT_QPA_PLATFORM": "offscreen"
   },
   "postCreateCommand": "bash .devcontainer/setup.sh"

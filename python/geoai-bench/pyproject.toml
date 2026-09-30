@@ -38,8 +38,8 @@ Repository = "https://github.com/Archont561/geoaiworkbench"
 Issues = "https://github.com/Archont561/geoaiworkbench/issues"
 
 # The harness's user-facing surface. A console script here is what makes the
-# published package a tool rather than a library, and what the airlock gate invokes
-# to prove a restored environment can run something.
+# published package a tool rather than a library: a restored environment can then do
+# something rather than only import.
 [project.scripts]
 geoai-bench = "geoai_bench.__main__:main"
 

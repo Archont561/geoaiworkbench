@@ -8,32 +8,30 @@
 #
 # ── feature layers ────────────────────────────────────────────────────────────
 # Four layers, so a version bump to one toolchain is its own reviewable diff and
-# `default` is a deliberate statement rather than an accident of whatever was last
-# added:
+# each environment installs only the layers it needs:
 #
 #   qgis     QGIS + the interpreter its PyQGIS bindings were built against
 #   python   the benchmark toolchain: pytest, pytest-cov, hatchling, pip, ruff
 #   bun      bun — the only JavaScript runtime here (docs, agent tooling, turbo)
 #   utils    this repository's own instruments: convco, lefthook, actionlint, taplo
 #
-# ── the icu ceiling — read this before bumping QGIS ───────────────────────────
-# `qgis` is pinned at `>=3.44.7` and MUST NOT be raised to 3.44.9 without
-# splitting the environment. Verified against conda-forge by qgis-rs, whose
-# pixi.toml documents the same constraint:
+# ── the icu ceiling — why there are two environments ──────────────────────────
+# `qgis` is pinned at `>=3.44.7` and `bun` at `>=1.3.11,<2`, and the two do not
+# agree about icu. Verified against conda-forge by qgis-rs, whose pixi.toml
+# documents the same constraint:
 #
 #   qgis  3.44.9 | 3.44.11 | 3.44.14   requires  icu >=78.3,<79.0a0
 #   bun   1.3.7  | 1.3.9  | 1.3.10 | 1.3.11  requires  icu >=75.1,<76.0a0
 #
-# There is no icu satisfying both, so a single environment carrying QGIS and bun
-# stops solving the moment the solver is allowed to prefer a newer QGIS. The
-# `>=3.44.7` floor is what currently resolves down to 3.44.7, the last QGIS that
-# agrees with bun's icu. `pixi.lock` records icu 75.1 for exactly this reason.
+# There is no icu satisfying both, which is why `default` and `bun` are separate
+# environments: QGIS is free to solve against icu 78.3 while bun solves against
+# icu 75.1, and neither has to care what the other did. While they shared one
+# environment the only thing holding the solve together was the `>=3.44.7` floor
+# resolving *down* to 3.44.7, the last QGIS that agrees with bun's icu.
 #
-# The fix is qgis-rs's two-environment shape: `default` (QGIS, QGIS-free of bun)
-# and `bun`, with `.pixi-sandbox.toml` packing both. That is a deliberate,
-# separately-reviewable change and is tracked as a backlog task — it is not done
-# here, so this manifest must keep `bun` and `qgis` in one environment and must
-# keep the QGIS floor where it is. See `.knowledge/08-technology-decisions/qgis-version-3.44.md`.
+# The floor is therefore free to move, and it has not been moved here: the split and
+# a QGIS bump are two reviewable diffs, so `pixi.lock` still records QGIS 3.44.7.
+# See `.knowledge/08-technology-decisions/qgis-version-3.44.md`.
 #
 # ── why the toolchain is pinned and not inherited ────────────────────────────
 # `pixi.lock` records the exact interpreter QGIS was solved against, so a
@@ -75,14 +73,15 @@
 # editable, so `import geoai_core` works from the repository root and from any
 # process the root environment starts. The alternative — `pip install -e` from a
 # task — builds the same wheel but leaves the package absent from `pixi.lock`, so
-# an airlock restore would not have it and the sandbox would differ from the
+# a sandbox restore would not have it and the transport would differ from the
 # developer's machine. The path source dependency is the difference between
 # "installed here" and "recorded in the environment".
 #
-# Pins (verified 2026-09-30): qgis 3.44.7, python 3.12.*, bun 1.3.x, convco 0.7.x,
-# lefthook 2.1.x, actionlint 1.7.x, taplo 0.10.x (conda-forge). Adding a pin means
-# one `pixi lock` to refresh pixi.lock — `pixi install --locked` in CI and the
-# devcontainer fails until that lands.
+# Pins (verified 2026-09-30): qgis 3.44.7 (default), python 3.12.*, bun 1.3.x (bun),
+# convco 0.7.x, lefthook 2.1.x, actionlint 1.7.x, taplo 0.10.x (conda-forge). Adding
+# a pin means one `pixi lock` to refresh pixi.lock — `pixi install --locked` in CI
+# and the devcontainer fails until that lands. One lockfile covers both
+# environments: pixi locks a workspace, not an environment.
 
 [workspace]
 name = "geoaiworkbench"
@@ -132,21 +131,27 @@ actionlint = ">=1.7.12,<2"
 taplo = ">=0.10.0,<0.11"
 
 # ── PyPI surface ──────────────────────────────────────────────────────────────
-# The libraries the harness and the MCP server are written against.
+# The libraries the harness and the MCP server are written against. They live in the
+# `python-toolchain` feature rather than in `[workspace.pypi-dependencies]` because a
+# workspace-level table is solved into *every* environment, and pixi refuses to solve
+# a PyPI requirement list into an environment with no Python interpreter: the `bun`
+# environment fails the lock outright with "No Python interpreter found in the
+# dependencies". Attaching the table to the feature that owns Python is what makes a
+# Python-free `bun` environment expressible.
 #
-# Declared here rather than in a conda feature because `mcp` — the Model Context
-# Protocol Python SDK — is not a conda-forge package, so at least one of these four
-# cannot come from conda. Declaring all four in one table keeps the statement "this
-# is the list of PyPI requirements" true and in one place; pixi's solver is still
-# free to satisfy typer, rich and pydantic from conda-forge, and on the current solve
-# it does. That is the intended behaviour and not a contradiction of the comment
-# above: the table records *what the harness needs*, not which index served it.
+# It is a PyPI table and not `[feature.python-toolchain.dependencies]` because `mcp`
+# — the Model Context Protocol Python SDK — is not a conda-forge package, so at least
+# one of these four cannot come from conda. Declaring all four in one table keeps the
+# statement "this is the list of PyPI requirements" true and in one place; pixi's
+# solver is still free to satisfy typer, rich and pydantic from conda-forge, and on
+# the current solve it does. That is the intended behaviour: the table records *what
+# the harness needs*, not which index served it.
 #
 # The reason it is not merely "put them all in conda" is the failure mode the single
 # table avoids. Two channels serving the same name is how an environment ends up with
 # one pydantic from conda and another from PyPI, and the resulting ImportError names
 # neither.
-[pypi-dependencies]
+[feature.python-toolchain.pypi-dependencies]
 typer = ">=0.15,<1"
 rich = ">=13.9,<15"
 mcp = ">=1.9,<2"
@@ -185,8 +190,9 @@ geoai-mcp = { path = "python/geoai-mcp" }
 geoai-bench = { path = "python/geoai-bench" }
 
 [feature.bun.dependencies]
-# The only JavaScript runtime in the project. See the icu note before adding
-# anything that needs a different icu than 75.1.
+# The only JavaScript runtime in the project, and the sole occupant of the `bun`
+# environment. Its icu 75.1 no longer has to agree with QGIS's — that was the whole
+# reason for the split — so a version bump here is an ordinary bump, not a solve.
 bun = { workspace = true }
 
 [feature.utils.dependencies]
@@ -215,16 +221,19 @@ QT_QPA_PLATFORM = "offscreen"
 
 # ── environments ──────────────────────────────────────────────────────────────
 [environments]
-# `default` is pixi's implicit environment, so every task is `pixi run <task>`
-# with no `-e` flag — in a shell, in a git hook, or in a workflow step.
+# Two, and the second one exists only because of icu (see the header).
 #
-# ONE environment, deliberately. The two-environment split the header describes is
-# the right end state and is a backlog task, but doing it now would mean two
-# lockfiles, two installs in every CI job, and `bun` tasks needing
-# `default-environment = "bun"` — all of it for a QGIS bump that has not been asked
-# for. While it stays one environment, `qgis` and `bun` share this solve and the
-# QGIS floor must not move.
-default = { features = ["qgis", "python-toolchain", "bun", "utils"] }
+#   default   qgis + python-toolchain + utils. The interpreter QGIS was solved
+#             against, the three path-source packages, and every git instrument.
+#   bun       bun, and nothing else but bun. Turbo, biome and the agent CLIs are
+#             Bun-workspace packages resolved from the root `bun.lock`, so this
+#             environment is a runtime and a lockfile, not a toolchain.
+#
+# `utils` is in `default` alone. Every hook reaches taplo, actionlint and convco
+# through an explicit `-e default`, so a second copy in `bun` would only make the
+# packed sandbox larger.
+default = { features = ["qgis", "python-toolchain", "utils"] }
+bun = { features = ["bun"] }
 
 # ---------------------------------------------------------------------------
 # Tasks. Everything a human, a git hook or a CI job does is one of these, so a
@@ -238,9 +247,37 @@ default = { features = ["qgis", "python-toolchain", "bun", "utils"] }
 # to belong to.
 #
 # NOTE (pixi 0.81): `default-environment` is only accepted on tasks that have a
-# `cmd`. Pure aggregators (setup / gates / ci) omit it.
+# `cmd`, so the pure aggregators (`setup`, `gates`) cannot use it — they name the
+# environment per dependency instead, below.
+#
+# ── which environment a task runs in ──────────────────────────────────────────
+# Every task that reaches bun declares `default-environment = "bun"`; everything
+# else runs in `default`, which is what a bare `pixi run` picks. That field is
+# honoured on exactly one kind of invocation, which was measured on pixi 0.81.0
+# rather than assumed:
+#
+#   pixi run TASK              from a bare shell  → TASK's default-environment
+#   pixi run -e ENV TASK       from anywhere      → ENV, always
+#   pixi run TASK              from inside ENV    → ENV, whatever TASK declares
+#   depends-on = [{ task, environment }]          → the named environment, always
+#
+# The third line is the trap. `scripts/ci.sh` and every hook already run inside an
+# activated environment, so a bare `pixi run fmt` there would execute in `default`
+# — where turbo does not exist, and the failure names a missing binary rather than
+# a wrong environment. Hence: nested calls name `-e`, and every `depends-on` entry
+# in this file is the structured `{ task, environment }` form, which is immune to
+# the ambient one. The result is that the whole graph is environment-determined:
+# `pixi run -e default gates` passes, because `-e` selects the *entry* task and
+# nothing else.
 # ---------------------------------------------------------------------------
 [tasks]
+
+# ── bun ───────────────────────────────────────────────────────────────────────
+# The single door into the bun environment: `pixi run bun x turbo run test`,
+# `pixi run bun --version`. Every other bun task below either *is* this task or
+# declares `default-environment = "bun"` itself; no task in `default` shells out to
+# the bun binary.
+bun = { cmd = "bun", default-environment = "bun", description = "Run bun in the bun environment (passthrough for ad-hoc bun commands)" }
 
 # ── setup ─────────────────────────────────────────────────────────────────────
 # One install for the whole Bun workspace: the root package.json declares the
@@ -251,12 +288,15 @@ default = { features = ["qgis", "python-toolchain", "bun", "utils"] }
 # Note what is NOT here: any `pip install -e python/*`. Those packages are already
 # in the environment as path source dependencies; a task that pip-installed them
 # would build a second, differently-resolved copy.
-bun-install = { cmd = "bun install --frozen-lockfile", description = "Install the Bun workspace from the root lockfile" }
+bun-install = { cmd = "bun install --frozen-lockfile", default-environment = "bun", description = "Install the Bun workspace from the root lockfile" }
 # Install the git hooks. Run once per clone; `lefthook install` is idempotent.
 hooks-install = { cmd = "lefthook install", description = "Install the lefthook git hooks into .git/hooks" }
+# The `environment` on each entry is load-bearing. A `depends-on` string inherits
+# the environment the graph was entered from, so `pixi shell -e bun` then
+# `pixi run setup` would look for lefthook in `bun`, where it is not installed.
 setup = { description = "Materialise the workspace: pixi environment, Bun workspace, git hooks", depends-on = [
-  "bun-install",
-  "hooks-install",
+  { task = "bun-install", environment = "bun" },
+  { task = "hooks-install", environment = "default" },
 ] }
 
 # ── repo-wide task graph (turbo) ──────────────────────────────────────────────
@@ -265,31 +305,35 @@ setup = { description = "Materialise the workspace: pixi environment, Bun worksp
 # that declares that script and skips the ones that do not — so `test` runs pytest
 # for all three Python packages under one command and one cache. The
 # `depends-on` here is only what a clone needs before turbo can start.
-build = { cmd = "bun run all:build", depends-on = [
-  "bun-install",
+#
+# These are the tasks that run bun *and* orchestrate Python, which is why every one
+# of them is in the bun environment: turbo exists there and nowhere else. The Python
+# side re-enters `default` on its own — see the `//` note in python/*/package.json.
+build = { cmd = "bun run all:build", default-environment = "bun", depends-on = [
+  { task = "bun-install", environment = "bun" },
 ], description = "Build every package that has a build" }
-test = { cmd = "bun run all:test", depends-on = [
-  "bun-install",
+test = { cmd = "bun run all:test", default-environment = "bun", depends-on = [
+  { task = "bun-install", environment = "bun" },
 ], description = "Run every package's tests" }
-lint = { cmd = "bun run all:lint", depends-on = [
-  "bun-install",
+lint = { cmd = "bun run all:lint", default-environment = "bun", depends-on = [
+  { task = "bun-install", environment = "bun" },
 ], description = "Lint every package" }
 # The repository's own JSON and TypeScript. Separate from `lint` on purpose: `lint`
 # is a turbo fan-out over *packages*, and biome has nothing to say about a Python
 # package. This task covers the files with no package to belong to — turbo.json,
 # biome.json, the workflow-adjacent config, scripts/*.ts. Biome reads .gitignore
 # (see biome.json), so the pixi and Bun trees are excluded without being named here.
-lint-js = { cmd = "bun x biome check .", depends-on = [
-  "bun-install",
+lint-js = { cmd = "bun x biome check .", default-environment = "bun", depends-on = [
+  { task = "bun-install", environment = "bun" },
 ], description = "Lint and format-check the repository's JSON and TypeScript" }
-fmt-js = { cmd = "bun x biome check --write .", depends-on = [
-  "bun-install",
+fmt-js = { cmd = "bun x biome check --write .", default-environment = "bun", depends-on = [
+  { task = "bun-install", environment = "bun" },
 ], description = "Rewrite the repository's JSON and TypeScript with biome" }
-cov = { cmd = "bun run all:cov", depends-on = [
-  "bun-install",
+cov = { cmd = "bun run all:cov", default-environment = "bun", depends-on = [
+  { task = "bun-install", environment = "bun" },
 ], description = "Measure coverage for every package that reports it" }
-fmt = { cmd = "bun run all:fmt", depends-on = [
-  "bun-install",
+fmt = { cmd = "bun run all:fmt", default-environment = "bun", depends-on = [
+  { task = "bun-install", environment = "bun" },
 ], description = "Rewrite every package with its formatter" }
 # No `advisories` task yet. Three ecosystems would each need one (conda/pip, Bun,
 # and the GitHub Actions that are pinned rather than audited), and a task that names
@@ -302,14 +346,14 @@ fmt = { cmd = "bun run all:fmt", depends-on = [
 # Every publishable surface shares one number. `version-check` is in `gates`, so
 # forgetting to bump a manifest fails before a commit lands rather than after a
 # release. Five manifests carry the version: this file and four pyproject.toml.
-version = { cmd = "bun \"$PIXI_PROJECT_ROOT/scripts/version.ts\"", depends-on = [
-  "bun-install",
+version = { cmd = "bun \"$PIXI_PROJECT_ROOT/scripts/version.ts\"", default-environment = "bun", depends-on = [
+  { task = "bun-install", environment = "bun" },
 ], description = "Print the workspace version from the manifest that owns it" }
-version-check = { cmd = "bun \"$PIXI_PROJECT_ROOT/scripts/version.ts\" --check", depends-on = [
-  "bun-install",
+version-check = { cmd = "bun \"$PIXI_PROJECT_ROOT/scripts/version.ts\" --check", default-environment = "bun", depends-on = [
+  { task = "bun-install", environment = "bun" },
 ], description = "Assert every release manifest agrees with the workspace version" }
-version-set = { cmd = "bun \"$PIXI_PROJECT_ROOT/scripts/version.ts\" --set", depends-on = [
-  "bun-install",
+version-set = { cmd = "bun \"$PIXI_PROJECT_ROOT/scripts/version.ts\" --set", default-environment = "bun", depends-on = [
+  { task = "bun-install", environment = "bun" },
 ], description = "Set the release version in every manifest that owns a literal" }
 
 # ── repo utilities (lefthook + CI share these) ─────────────────────────────────
@@ -351,16 +395,16 @@ publish-dist = { cmd = "pixi publish --target-dir dist", description = "Build th
 # The packages are installed in the root Bun workspace and invoked through `bun x`,
 # which uses Bun instead of their Node shebangs. That keeps the commands usable in
 # a restored sandbox environment, which has no Node.js runtime.
-backlog = { cmd = "bun x backlog", depends-on = [
-  "bun-install",
+backlog = { cmd = "bun x backlog", default-environment = "bun", depends-on = [
+  { task = "bun-install", environment = "bun" },
 ], description = "Manage the Markdown project backlog" }
-skills = { cmd = "bun x skills", depends-on = [
-  "bun-install",
+skills = { cmd = "bun x skills", default-environment = "bun", depends-on = [
+  { task = "bun-install", environment = "bun" },
 ], description = "Manage agent skills" }
-opencode-install = 'BUN_BIN="$(bun pm bin -g)" && bun add -g opencode-ai@1.18.33 && (ln -sfn "$BUN_BIN/opencode" /usr/local/bin/opencode 2>/dev/null || (mkdir -p "$HOME/.local/bin" 2>/dev/null && ln -sfn "$BUN_BIN/opencode" "$HOME/.local/bin/opencode" 2>/dev/null) || echo "opencode installed to $BUN_BIN, which is not on PATH: neither /usr/local/bin nor ~/.local/bin is writable")'
+opencode-install = { cmd = 'BUN_BIN="$(bun pm bin -g)" && bun add -g opencode-ai@1.18.33 && (ln -sfn "$BUN_BIN/opencode" /usr/local/bin/opencode 2>/dev/null || (mkdir -p "$HOME/.local/bin" 2>/dev/null && ln -sfn "$BUN_BIN/opencode" "$HOME/.local/bin/opencode" 2>/dev/null) || echo "opencode installed to $BUN_BIN, which is not on PATH: neither /usr/local/bin nor ~/.local/bin is writable")', default-environment = "bun" }
 setup-opencode = { depends-on = [
   "opencode-install",
-], cmd = "\"$(bun pm bin -g)/opencode\" models --refresh" }
+], cmd = "\"$(bun pm bin -g)/opencode\" models --refresh", default-environment = "bun" }
 
 # ── sandbox transport (pixi-sandbox) ───────────────────────────────────────────
 # pack -> doctor -> publish, locally. `pixi-sandbox` is not a conda dependency; it
@@ -381,15 +425,19 @@ sandbox-restore = { cmd = "bash scripts/restore.sh", description = "Restore the 
 #
 # `lint-toml` is scoped to two files and `lint-actions` is repository-global; neither
 # is a turbo fan-out, which is why they appear here by name rather than under `lint`.
+#
+# Each entry names its environment. Two of the eight run in `bun` and six in
+# `default`, so an unqualified `depends-on` list would silently run whichever half
+# the caller's ambient environment happened to be — see the note above this table.
 gates = { description = "Every check that must pass before a commit lands", depends-on = [
-  "lint",
-  "lint-js",
-  "lint-toml",
-  "lint-actions",
-  "test",
-  "version-check",
-  "verify-packages",
-  "publish-plan",
+  { task = "lint", environment = "bun" },
+  { task = "lint-js", environment = "bun" },
+  { task = "lint-toml", environment = "default" },
+  { task = "lint-actions", environment = "default" },
+  { task = "test", environment = "bun" },
+  { task = "version-check", environment = "bun" },
+  { task = "verify-packages", environment = "default" },
+  { task = "publish-plan", environment = "default" },
 ] }
 # The gate plus the producers, in an order chosen for how fast each check fails
 # rather than for the task graph. This is a script and not a `depends-on` list

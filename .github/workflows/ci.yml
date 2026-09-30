@@ -3,23 +3,21 @@
 # CI file should own — if a step here knew how to lint or test something, the local
 # gate and CI could disagree, and CI would be the only place you could find out.
 #
-# Two other jobs exist, and both are cheap and independent on purpose:
-#
-#   `sandbox-plan` needs neither the pixi environment nor the Bun workspace, so it
-#   reports a broken publish contract in under a minute instead of waiting behind a
-#   multi-gigabyte QGIS solve.
-#   `airlock` is the offline proof. It is `workflow_call`-able rather than triggered
-#   here, because the authoritative version runs on the plan's own native runner with
-#   egress denied — see the airlock job's header in its own workflow file.
+# One other job exists, and it is cheap and independent on purpose: `sandbox-plan`
+# needs neither the pixi environment nor the Bun workspace, so it reports a broken
+# publish contract in under a minute instead of waiting behind a multi-gigabyte QGIS
+# solve. The offline transport itself is published by publish-sandbox.yml and verified
+# by `pixi-sandbox doctor --verify`, which is a local task (`pixi run sandbox-doctor`)
+# rather than a second CI workflow.
 #
 # What this file deliberately does NOT do:
 #
 #   * no actions/setup-python. The pixi `default` environment already carries the
 #     interpreter QGIS was compiled against (3.12.*). A second interpreter on PATH is
 #     how you get a wheel built for one ABI and imported by another.
-#   * no setup-node. `bun` is a conda dependency; a system node would be a second
-#     JavaScript runtime, and every `.bin` entry carries a node shebang this
-#     repository deliberately does not provide.
+#   * no setup-node. `bun` is a conda dependency in its own pixi environment; a
+#     system node would be a second JavaScript runtime, and every `.bin` entry
+#     carries a node shebang this repository deliberately does not provide.
 #   * no per-package pytest steps. The turbo `test` task fans out across all three
 #     Python packages under one command and one ordering.
 name: CI
@@ -76,9 +74,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # Only the Pixi executable. `pixi install --locked` below is the step that owns
-      # the environment, so the action's own cache is disabled rather than fighting it
-      # for the same directory.
+      # Only the Pixi executable. `pixi install --locked --all` below is the step that
+      # owns the environments, so the action's own cache is disabled rather than
+      # fighting it for the same directory.
       - name: Set up pixi
         uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
         with:
@@ -112,19 +110,24 @@ jobs:
             turbo-${{ runner.os }}-${{ hashFiles('bun.lock') }}-
             turbo-${{ runner.os }}-
 
-      # The lockfile IS the environment. A solution that differs from it is not this
+      # The lockfile IS the environments. A solution that differs from it is not this
       # project's environment, and `--locked` is what turns a stale pixi.lock into a
       # failure at this step rather than a silently different dependency graph later.
-      - name: Install the locked environment
-        run: pixi install --locked
+      # `--all` is the other half of that: a bare `pixi install` installs `default`
+      # only, which is a 2 GB QGIS solve and no JavaScript runtime, so every step
+      # below would fail on a missing turbo rather than on a missing environment.
+      - name: Install the locked environments
+        run: pixi install --locked --all
 
       # The Bun workspace: turbo, biome, backlog and the skills CLI. One resolution
-      # record at the root, no lockfile per member.
+      # record at the root, no lockfile per member. `-e bun` because this is the one
+      # place CI calls a bun task directly, and pixi resolves an unqualified nested
+      # `pixi run` in the environment it was called from.
       - name: Install the Bun workspace from the root lockfile
-        run: pixi run bun-install
+        run: pixi run -e bun bun-install
 
       - name: Verify every manifest states the same version
-        run: pixi run version-check
+        run: pixi run -e bun version-check
 
       # THE gate. Identical to what a contributor runs before pushing, because it is
       # literally the same script. Produces python/*/coverage.xml on the way.

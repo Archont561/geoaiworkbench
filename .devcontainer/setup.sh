@@ -10,32 +10,36 @@
 set -euo pipefail
 
 # No Node.js in this devcontainer, by design — see the header of pixi.toml for why
-# QGIS and bun share one environment and bun is the only JavaScript runtime. Anything
-# with a `node` shebang (`node_modules/.bin/*`, an npm-installed CLI) is unreachable
-# here, which is exactly why every JS tool in pixi.toml goes through `bun x`.
+# bun is the only JavaScript runtime. Anything with a `node` shebang
+# (`node_modules/.bin/*`, an npm-installed CLI) is unreachable here, which is exactly
+# why every JS tool in pixi.toml goes through `bun x` inside the `bun` environment.
 export BUN_INSTALL="$HOME/.bun"
 mkdir -p "$BUN_INSTALL/bin"
 
 pixi --version
 
-# 1. The environment. `--frozen` makes a stale pixi.lock an error rather than a silent
-#    re-solve: the lockfile IS the environment, and a container that quietly solved
-#    something else is a container whose test results mean nothing.
-echo "==> installing the locked environment"
-pixi install --frozen
+# 1. The environments. `--frozen` makes a stale pixi.lock an error rather than a
+#    silent re-solve: the lockfile IS the environments, and a container that quietly
+#    solved something else is a container whose test results mean nothing. `--all`
+#    because a bare `pixi install` installs `default` alone, which has no JavaScript
+#    runtime in it at all.
+echo "==> installing the locked environments"
+pixi install --frozen --all
 
-# Past this line the environment is activated by every `pixi run`, which is also the
-# first moment `bun` is on PATH. Checking for it any earlier would be checking the
-# base image's PATH, which says nothing about this project.
-pixi run bun --version
+# Past this line the environments are activated by `pixi run`, which is also the first
+# moment `bun` is on PATH. Checking for it any earlier would be checking the base
+# image's PATH, which says nothing about this project. The `-e bun` on every bun call
+# below is what says *which* environment: pixi resolves an unqualified `pixi run` in
+# the ambient one, and setup.sh runs before there is one.
+pixi run -e bun bun --version
 
 # 2. The Bun workspace: turbo, biome, backlog, and the skills CLI.
 echo "==> installing the Bun workspace"
-pixi run bun-install
+pixi run -e bun bun-install
 
 # 3. Git hooks. `lefthook install` is idempotent, so re-running setup.sh is safe.
 echo "==> registering the git hooks"
-pixi run hooks-install
+pixi run -e default hooks-install
 
 # 4. opencode, into BUN_INSTALL rather than the pixi prefix, so it is on PATH for
 #    ordinary shells and not only for `pixi run` ones. This deliberately does NOT call
@@ -45,7 +49,7 @@ pixi run hooks-install
 #    the model catalog is refreshed independently of the CLI version, so the two can
 #    move without either being wrong.
 echo "==> installing opencode"
-pixi run env BUN_INSTALL="$BUN_INSTALL" bun install --global --no-audit --no-fund opencode-ai@1.18.33
+pixi run -e bun env BUN_INSTALL="$BUN_INSTALL" bun install --global --no-audit --no-fund opencode-ai@1.18.33
 
 # bashrc rather than bash_profile: an interactive devcontainer shell is started without
 # a login flag, so bash_profile is skipped.

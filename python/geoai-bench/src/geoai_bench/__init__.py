@@ -12,8 +12,8 @@ run record names the tool surface it ran against rather than assuming a constant
 one. A harness that cannot tell MCP-5 from MCP-15 measured nothing.
 
 This module is a scaffold. It declares the package identity the environment and the
-test suite need, plus the console entry point the airlock gate invokes to prove a
-restored environment can run something.
+test suite need, plus the console entry point a restored environment runs to prove it
+can do something.
 """
 
 __version__ = "0.1.0"
