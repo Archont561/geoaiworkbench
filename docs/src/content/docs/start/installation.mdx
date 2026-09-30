@@ -1,0 +1,91 @@
+---
+title: Installation
+description: Get both pixi environments, the Bun workspace and the git hooks onto a machine — or skip all three and use the devcontainer.
+---
+
+import { Aside, Steps, Tabs, TabItem } from "@astrojs/starlight/components";
+
+The only prerequisite is [pixi](https://pixi.sh). Everything else — the Python
+interpreter QGIS was compiled against, QGIS itself, bun, the git instruments — is
+declared in `pixi.toml` and installed from `pixi.lock`.
+
+<Aside type="caution" title="Do not bring your own Python or Node">
+  The `default` environment already carries the interpreter QGIS was built against
+  (3.12.x). A second interpreter on `PATH` is how a wheel built for one ABI gets
+  imported by another. There is likewise no Node.js anywhere in this project on
+  purpose: bun is the only JavaScript runtime, and every `node_modules/.bin` entry
+  carries a `node` shebang nothing here provides.
+</Aside>
+
+## From a clone
+
+<Steps>
+
+1. **Install both environments.**
+
+   ```bash
+   pixi install --frozen --all
+   ```
+
+   `--all` is not optional. A bare `pixi install` materialises `default` only — a
+   ~2.9 GB QGIS solve with no JavaScript runtime — and every turbo task would then
+   fail on a missing `turbo` rather than on a missing environment. `--frozen` turns a
+   stale `pixi.lock` into an error instead of a quietly different dependency graph.
+
+2. **Materialise the workspace.**
+
+   ```bash
+   pixi run setup
+   ```
+
+   One task, three things: the Bun workspace from the root `bun.lock`, the lefthook
+   git hooks, and (through the environment table) the three `python/` packages as path
+   source dependencies.
+
+3. **Prove it.**
+
+   ```bash
+   pixi run verify-packages   # import geoai_core, geoai_mcp, geoai_bench
+   pixi run gates             # the whole check list, no network needed
+   ```
+
+</Steps>
+
+## With the devcontainer
+
+`.devcontainer/` builds all of the above plus `opencode` on `PATH`. Open the
+repository in a container-aware editor and there is no step 1.
+
+## Working on the documentation
+
+The docs site is a member of the same Bun workspace, so it needs nothing beyond the
+steps above:
+
+<Tabs>
+  <TabItem label="pixi">
+    ```bash
+    pixi run docs-dev       # http://localhost:4321/geoaiworkbench/
+    pixi run docs-build     # static output in docs/dist/
+    pixi run docs-preview   # serve the built output
+    ```
+  </TabItem>
+  <TabItem label="turbo">
+    ```bash
+    pixi run -e bun bun x turbo run dev --filter=@geoaiworkbench/docs
+    pixi run -e bun bun x turbo run build --filter=@geoaiworkbench/docs
+    ```
+  </TabItem>
+  <TabItem label="bare bun">
+    ```bash
+    # Supported, but pixi is what CI runs and what pins the toolchain.
+    bun install --frozen-lockfile
+    bun run --cwd docs dev
+    ```
+  </TabItem>
+</Tabs>
+
+<Aside title="Why the /geoaiworkbench prefix in dev">
+  The site is a GitHub Pages *project* site, so `astro.config.mjs` sets
+  `base: "/geoaiworkbench"`. Astro applies `base` to the dev server too — the root
+  path `/` is a 404 by design.
+</Aside>

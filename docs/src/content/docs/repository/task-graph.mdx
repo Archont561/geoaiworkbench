@@ -1,0 +1,73 @@
+---
+title: The task graph
+description: How pixi, turbo, bun and lefthook divide the work — and which of them owns the list of checks that must pass.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Four tools, one job each:
+
+| Tool | Owns |
+| --- | --- |
+| **pixi** | The environments, every entry-point task, and the `gates` list. |
+| **turbo** | The fan-out across workspace packages. Runs only in the `bun` environment. |
+| **bun** | The JavaScript runtime and the single workspace resolution record (`bun.lock`). |
+| **lefthook** | When the checks run relative to git — `commit-msg` and `pre-push`. |
+
+```
+pixi run ci  →  scripts/ci.sh  →  pixi run gates  →  { turbo fan-out, taplo, actionlint, … }
+                                        ↑
+                        lefthook pre-push calls the same script
+                        GitHub Actions calls the same script
+```
+
+<Aside type="tip" title="One owner">
+  `pixi.toml`'s `gates` owns *what must pass*. `scripts/ci.sh` owns the *order* and
+  the *producers*, and calls `pixi run gates` rather than restating the list. One
+  owner, or the local gate and CI drift apart and CI becomes the only place you can
+  find out.
+</Aside>
+
+## The turbo tasks
+
+`turbo run <task>` fans out to every package that declares that script and skips the
+ones that do not — so one `pixi run test` covers all three Python packages, and one
+`pixi run build` covers them plus the docs site.
+
+| Task | Declared by | Notes |
+| --- | --- | --- |
+| `build` | the three Python packages, `docs` | `dependsOn: ["^build"]`. Only `docs` produces an output turbo caches (`dist/**`). |
+| `test` | the three Python packages | `dependsOn: ["build"]`. |
+| `lint` | the three Python packages, `docs` | ruff for Python, `astro check` for the site. |
+| `cov` | the three Python packages | `outputs: ["coverage.xml"]`. |
+| `fmt` | the three Python packages | `cache: false` — it rewrites files. |
+| `dev` | `docs` | `cache: false`, `persistent: true`. |
+
+Two things are *not* turbo tasks, and are called by name from `gates` instead:
+`lint-toml` (scoped to exactly two files — see below) and `lint-actions`
+(actionlint, which is repository-global). Neither is a fan-out over packages, so
+putting them in one would be a category error.
+
+## Why taplo is scoped to two files
+
+Only `pixi.toml` and `.pixi-sandbox.toml` are kept in taplo's canonical form; the
+rest of the repository uses the aligned-`=` style deliberately. A bare
+`taplo format --check` takes no path, walks the whole working tree and reports 107
+files — 100 of them PyQt5's and sipbuild's vendored manifests inside
+`.pixi/envs/default/lib/python3.12/site-packages/`. `scripts/lint-toml.sh` names the
+two files, and takes staged paths as arguments when lefthook calls it.
+
+## Why `.gitignore` is load-bearing
+
+`biome.json` sets `vcs.useIgnoreFile`, so Biome reads `.gitignore` to decide what not
+to lint. A rule deleted there does not merely untrack a directory — it hands that
+directory to `bun x biome check .`, including, historically, the 2.9 GB tree under
+`.pixi/envs`. The key is `clientKind`, not `client`; with the wrong spelling Biome
+disables VCS integration with a diagnostic rather than failing.
+
+## Never `node_modules/.bin`
+
+Every JavaScript tool is invoked as `bun run …` or `bun x …`. This matters beyond
+tidiness: every `.bin` entry carries a `node` shebang, and a machine restored from
+the offline sandbox branch has no Node.js at all — so a `.bin` call is a broken gate
+on exactly the machines the sandbox exists for.

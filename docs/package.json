@@ -1,0 +1,21 @@
+{
+  "//": "The documentation site. A member of the root Bun workspace (see the root package.json `workspaces`), which is what makes `bun install` at the root resolve Astro here and `turbo run build` reach this package. Three rules, all of them learned elsewhere in this repository. (1) The scripts call `astro` directly rather than `node_modules/.bin/astro`: bun is the only JavaScript runtime here and every `.bin` entry carries a `node` shebang nothing in this project provides — `bun run` resolves the binary through Bun instead. (2) `build` is `astro check && astro build`, so a broken link target or a frontmatter field the Starlight schema rejects fails the build rather than shipping. (3) There is no `test`, no `cov` and no `fmt` script: turbo skips a task a package does not declare, biome already formats this tree through the repository-wide `lint-js`/`fmt-js` tasks, and a second formatter over the same files is how two tools come to disagree.",
+  "name": "@geoaiworkbench/docs",
+  "type": "module",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro check && astro build",
+    "lint": "astro check",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@astrojs/starlight": "^0.42.4",
+    "astro": "^7.3.5",
+    "sharp": "^0.35.5",
+    "typescript": "^5.9.0"
+  }
+}

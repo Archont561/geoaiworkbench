@@ -1,0 +1,47 @@
+---
+title: Metrics
+description: The seven-layer evaluation framework — what each layer measures and why the layer numbering runs from task success upward.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+<Aside type="note" title="Specified, not implemented">
+  As with the paradigms, this is the design recorded under `.knowledge/03-metrics/`.
+  `python/geoai-bench` currently provides a Typer/Rich console script and no harness.
+</Aside>
+
+Roughly 35 metrics across seven layers. The stack reads bottom-up: layer 1 asks
+whether the task was done at all, and each layer above it asks a more specific
+question about *how*.
+
+```
+Layer 7: Security          ← attack surface, injection resistance
+Layer 6: Composite         ← weighted scores, cost/performance
+Layer 5: Complex tasks     ← PCS, SCR, LCP, SHR, recovery
+Layer 4: Execution         ← ED, errors, ITS, tokens, wall time
+Layer 3: Output quality    ← geometry, CRS, IoU, features, attributes
+Layer 2: Workflow process  ← steps, PEA, tool selection, validity
+Layer 1: Task success      ← TSR, Pass@1/3, completion, rejection
+```
+
+| Layer | Name | Metrics | Primary question |
+| --- | --- | --- | --- |
+| 1 | Task success | 5 | Did the agent produce the right answer? |
+| 2 | Workflow process | 6 | Did it take a sensible route to it? |
+| 3 | Output quality | 5 | Is the produced layer geometrically and attributively correct? |
+| 4 | Execution behaviour | 6 | What did it cost, and how deterministic was it? |
+| 5 | Complex tasks | 5 | Does the paradigm hold up on multi-step work? |
+| 6 | Composite | 4 | What does the trade-off look like as one number? |
+| 7 | Security | 4 | How much attack surface does the paradigm expose? |
+
+Two properties of the framework matter more than the individual metrics:
+
+**Every metric is computable in all three conditions.** A metric that only exists
+for MCP — a tool-selection accuracy that CodeGen has no analogue for — would make the
+central comparison incomparable. Where a concept only has a natural MCP form, it is
+either defined for CodeGen too or it is a secondary metric.
+
+**Layer 7 exists because the paradigms differ most there.** CodeGen executes
+arbitrary PyQGIS; MCP executes a fixed set of validated calls. That is the largest
+structural difference between the conditions, and a framework that stopped at layer 6
+would report it as a flexibility advantage with no cost attached.

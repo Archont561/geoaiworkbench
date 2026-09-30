@@ -1,0 +1,72 @@
+---
+title: Quickstart
+description: The five commands worth knowing, what each one actually runs, and the one rule that keeps them from running in the wrong environment.
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+```bash
+pixi install --frozen --all   # both environments
+pixi run gates                # every check that must pass before a commit lands
+```
+
+That is the loop. Everything else is a `pixi run` task, and `pixi run --help` lists
+them all with descriptions.
+
+## The five that matter first
+
+| Task | What it does |
+| --- | --- |
+| `pixi run gates` | The check list: lints, tests, version agreement, package registration, publish resolution. No network. |
+| `pixi run ci` | `gates` plus the format-drift rewrite, the built packages and coverage. The same `scripts/ci.sh` the pre-push hook and GitHub Actions run. |
+| `pixi run test` | Every package's tests, as one turbo fan-out. |
+| `pixi run docs-dev` | This site, live-reloading on `http://localhost:4321/geoaiworkbench/`. |
+| `pixi run sandbox-restore` | Reconstruct the whole environment offline, from a git branch. |
+
+<Aside type="tip" title="One owner for the check list">
+  `pixi.toml`'s `gates` owns *what* must pass. `scripts/ci.sh` owns the *order* and
+  calls `pixi run gates` rather than restating it. That is why "passes on my machine"
+  and "passes in Actions" cannot come to mean different things here.
+</Aside>
+
+## The one rule about environments
+
+A nested `pixi run TASK` runs in the environment it was called from. The task's own
+`default-environment` is honoured on the outermost invocation only — measured on pixi
+0.81.0, not assumed:
+
+| Invocation | Environment |
+| --- | --- |
+| `pixi run TASK`, from a bare shell | `TASK`'s `default-environment` |
+| `pixi run -e ENV TASK`, from anywhere | `ENV`, always |
+| `pixi run TASK`, from inside `ENV` | `ENV`, whatever `TASK` declares |
+| `depends-on = [{ task = …, environment = … }]` | the named environment, always |
+
+The third row is the trap, and it is why every nested call in this repository names
+`-e` and every `depends-on` entry uses the structured form. Without it the failure
+reads `turbo: command not found`, which sends you looking for a missing dependency
+rather than a wrong environment.
+
+## Making a change
+
+<Steps>
+
+1. **Work.** Python lives under `python/`, orchestration in `pixi.toml` and
+   `turbo.json`, reasoning in `AGENTS.md` and `.knowledge/`.
+
+2. **Format and check.**
+
+   ```bash
+   pixi run fmt      # ruff across the Python packages, through turbo
+   pixi run fmt-js   # biome across the repository's JSON and TypeScript
+   pixi run gates
+   ```
+
+3. **Commit.** Messages are conventional-commit and checked by `convco` through the
+   `commit-msg` hook, so the format is decided for you by what failed. PR titles
+   follow the same spec.
+
+4. **Push.** The `pre-push` hook runs `scripts/ci.sh` — the same script CI runs — so a
+   red build is something you find out about locally.
+
+</Steps>

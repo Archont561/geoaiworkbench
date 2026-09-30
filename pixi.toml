@@ -385,11 +385,35 @@ publish-plan = { cmd = "pixi publish --dry-run", description = "Resolve and prin
 publish-dist = { cmd = "pixi publish --target-dir dist", description = "Build the publishable packages into dist/" }
 
 # ── documentation site ─────────────────────────────────────────────────────────
-# No docs site in this prototype, and so no tasks: a `docs-dev` task with `cwd =
-# "docs"` against a directory that does not exist fails at task resolution with a
-# message about a missing directory, which is a worse first impression of the
-# project than an absent feature. The seam is three lines here plus a `docs/`
-# workspace member; the QGIS-flavoured precedent is qgis-rs.
+# `docs/` is an Astro + Starlight site and a member of the root Bun workspace, so
+# it needs no install of its own: `bun-install` already resolved it from the root
+# `bun.lock`, and these three tasks are the same three turbo would run.
+#
+# They go through turbo (`bun run docs:*` in the root package.json) rather than
+# `bun --cwd docs …` for one reason: `docs` is the only package in this repository
+# whose build produces a cacheable artefact, and the cache is in turbo. The filter
+# is `@geoaiworkbench/docs`, the package's real name — a path filter would silently
+# match nothing after a directory rename, whereas a name filter fails loudly.
+#
+# `GEOAI_VERSION` is exported here rather than written into a page. `scripts/
+# version.ts` is the same authority `version-check` gates on, so the number the
+# site shows is the number the tree was built from; a bare `bun run build` inside
+# docs/ has no such export and falls back to the obviously-placeholder "dev". It is
+# declared in `docs/turbo.json`'s `env` list, so changing it invalidates the cached
+# build instead of replaying a site stamped with the previous version.
+#
+# `docs-preview` serves the *built* output and therefore depends on `docs-build`:
+# `astro preview` on an empty `dist/` reports a missing directory, which reads as a
+# broken task rather than a missing step.
+docs-dev = { cmd = "bun run docs:dev", default-environment = "bun", depends-on = [
+  { task = "bun-install", environment = "bun" },
+], description = "Serve the documentation site with HMR at http://localhost:4321/geoaiworkbench/" }
+docs-build = { cmd = "GEOAI_VERSION=\"$(bun \"$PIXI_PROJECT_ROOT/scripts/version.ts\")\" bun run docs:build", default-environment = "bun", depends-on = [
+  { task = "bun-install", environment = "bun" },
+], description = "Type-check and build the documentation site into docs/dist" }
+docs-preview = { cmd = "bun run docs:preview", default-environment = "bun", depends-on = [
+  { task = "docs-build", environment = "bun" },
+], description = "Serve the built documentation site from docs/dist" }
 
 # ── agent tooling ──────────────────────────────────────────────────────────────
 # The packages are installed in the root Bun workspace and invoked through `bun x`,

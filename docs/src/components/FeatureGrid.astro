@@ -1,0 +1,47 @@
+---
+/*
+ * The landing page's "what this repository actually guarantees" grid.
+ *
+ * Every claim here is one this repository can be held to today — the
+ * environments, the gate, the transport — rather than a description of the
+ * benchmark, which lives elsewhere and does not exist yet. Keeping the two
+ * apart is the whole point of the scope note above it on the page.
+ */
+const features = [
+  {
+    title: "Two locked environments",
+    desc: "QGIS pins icu 78.3 and bun pins icu 75.1, so no single solve satisfies both. `default` carries QGIS and the Python toolchain, `bun` carries the JavaScript runtime.",
+  },
+  {
+    title: "One check list, one owner",
+    desc: "`pixi run gates` is what must pass. The local run, the lefthook pre-push hook and GitHub Actions all call the same scripts/ci.sh, so they cannot come to disagree.",
+  },
+  {
+    title: "Path source packages",
+    desc: "The three python/ packages are path source dependencies of the root environment, so `pixi install` materialises them and `import geoai_core` works from any command.",
+  },
+  {
+    title: "Turbo fan-out",
+    desc: "One `turbo run test` covers every package. Python task caching is deliberately off: a Python result depends on the environment, which turbo's hash does not cover.",
+  },
+  {
+    title: "Offline by construction",
+    desc: "pixi-sandbox packs both environments onto an orphan branch; a machine with no network restores a working tree from git alone and verifies every declared byte.",
+  },
+  {
+    title: "Bun is the only runtime",
+    desc: "Every JS tool is reached through `bun run` or `bun x`. No node_modules/.bin path is ever invoked — a restored sandbox has no Node.js to honour those shebangs.",
+  },
+];
+---
+
+<div class="feature-grid not-content">
+  {
+    features.map((f) => (
+      <div class="feature-card">
+        <h3>{f.title}</h3>
+        <p set:html={f.desc.replace(/`([^`]+)`/g, "<code>$1</code>")} />
+      </div>
+    ))
+  }
+</div>

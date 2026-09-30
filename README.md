@@ -42,6 +42,7 @@ matter first:
 | `pixi run ci` | `gates` plus the format-drift rewrite, the built packages, and coverage. Same script the lefthook `pre-push` hook and CI run. |
 | `pixi run test` | Every package's tests, as one turbo fan-out. |
 | `pixi run -e bun bun x turbo …` | Any bun command, in the bun environment. |
+| `pixi run docs-dev` | The documentation site, live-reloading on <http://localhost:4321/geoaiworkbench/>. |
 | `pixi run sandbox-restore` | Reconstruct the environment offline from its git branch. |
 | `pixi run backlog -- <args>` | The task backlog. The `--` is required. |
 
@@ -55,6 +56,8 @@ pixi.toml          two environments, every task, and the single owner of the che
 ├── python/*/      three packages, registered as [package] path source dependencies.
 │                  Their scripts run `pixi run -e default -- …`, because turbo lives
 │                  in the bun environment and the interpreter does not (see AGENTS.md)
+├── docs/          the documentation site: Astro + Starlight, a Bun workspace
+│                  member, published to GitHub Pages by .github/workflows/docs.yml
 ├── turbo.json     the fan-out
 ├── biome          JSON and TypeScript, scoped by .gitignore
 ├── taplo          pixi.toml and .pixi-sandbox.toml only (scripts/lint-toml.sh)
@@ -82,6 +85,26 @@ workflow of its own:
 - `.github/workflows/publish-sandbox.yml` does the real publish, on a push that touched
   an input of the snapshot. Every third-party action is pinned to a 40-character commit
   SHA, which `pixi run lint-actions` (actionlint) enforces.
+
+## Documentation
+
+The prose lives in three places, and they do not overlap:
+
+- **[The site](https://archont561.github.io/geoaiworkbench/)** (`docs/`) — the
+  experiment, the environments, the task graph, and a reference for every pixi task.
+  Astro + Starlight, a member of the same Bun workspace, built by the same turbo run:
+
+  ```bash
+  pixi run docs-dev     # http://localhost:4321/geoaiworkbench/
+  pixi run docs-build   # astro check && astro build → docs/dist/
+  ```
+
+  Pushes to `main` that touch `docs/` or its inputs publish it to GitHub Pages; pull
+  requests build it without publishing. See [`docs/README.md`](docs/README.md).
+- **`AGENTS.md`** — why the configuration is shaped the way it is. Read it before
+  changing any of it.
+- **`.knowledge/`** — 216 files of research design, metrics and tool specifications.
+  The site summarises them; it does not replace them.
 
 ## Development
 

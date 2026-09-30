@@ -1,0 +1,147 @@
+# Builds the Astro + Starlight site in `docs/` and publishes it to GitHub Pages.
+#
+# Like ci.yml, this workflow owns toolchain setup and nothing else: the build is
+# `pixi run -e bun docs-build`, which is the same command a contributor runs, so the
+# site cannot build here and fail there (or the reverse). Everything the build needs
+# to know — the Astro config, the turbo filter, the version substitution — lives in
+# the repository, not in this file.
+#
+# What this file deliberately does NOT do:
+#
+#   * no setup-node. There is no Node.js anywhere in this project: bun is the only
+#     JavaScript runtime, and it is a conda dependency in the `bun` pixi environment.
+#   * no `default` environment. The docs need bun and nothing else; installing QGIS
+#     here would turn a two-minute job into a twenty-minute one for no output.
+#   * no deploy from a pull request. PRs build so a broken site is caught, and stop
+#     there — publishing from a fork's branch is not a thing this repository wants.
+#
+# The site is already type-checked by the gate: `pixi run gates` runs the turbo
+# `lint` fan-out, and the docs package's `lint` script is `astro check`. So this
+# workflow is the publisher, not the gate. It is separate from ci.yml because Pages
+# needs `pages: write` and `id-token: write`, and widening ci.yml's permissions to
+# publish a website would be the wrong trade.
+name: docs
+
+# The two path lists are identical and duplicated on purpose: GitHub Actions does
+# not support YAML anchors, so a `&docs-paths` / `*docs-paths` pair that looks
+# correct in an editor is rejected by the workflow parser. Keep them in step.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - ".github/workflows/docs.yml"
+      - "package.json"
+      - "bun.lock"
+      - "turbo.json"
+      - "pixi.toml"
+      - "pixi.lock"
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - ".github/workflows/docs.yml"
+      - "package.json"
+      - "bun.lock"
+      - "turbo.json"
+      - "pixi.toml"
+      - "pixi.lock"
+  workflow_dispatch:
+
+# Cancel a superseded build of the same ref, but never a deployment already in
+# flight — `cancel-in-progress` on the Pages group is how a half-published site
+# happens.
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  build:
+    name: Build the documentation site
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Only the Pixi executable; the install step below owns the environment, so
+      # the action's own cache is disabled rather than fighting it for the same
+      # directory. Same pinned version as ci.yml — two workflows on two pixi
+      # versions is two dependency resolutions.
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+        with:
+          pixi-version: v0.81.0
+          run-install: false
+          cache: false
+
+      # `bun` only. The lockfile is the environment, and `--locked` turns a stale
+      # pixi.lock into a failure here rather than a different toolchain later.
+      - name: Install the bun environment
+        run: pixi install --locked -e bun
+
+      - name: Cache the turborepo task cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo/cache
+          key: turbo-docs-${{ runner.os }}-${{ hashFiles('bun.lock') }}-${{ github.sha }}
+          restore-keys: |
+            turbo-docs-${{ runner.os }}-${{ hashFiles('bun.lock') }}-
+            turbo-docs-${{ runner.os }}-
+
+      # The docs site is a member of the root Bun workspace, so this is the same
+      # single install every other task depends on — there is no per-package
+      # lockfile to restore from.
+      - name: Install the Bun workspace from the root lockfile
+        run: pixi run -e bun bun-install
+
+      # `astro check && astro build`, through turbo, with GEOAI_VERSION exported
+      # from scripts/version.ts. Output lands in docs/dist.
+      - name: Build
+        run: pixi run -e bun docs-build
+
+      - name: Configure GitHub Pages
+        if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      - name: Upload the Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: docs/dist
+
+  deploy:
+    name: Publish to GitHub Pages
+    # Pull requests build and stop. A manual dispatch publishes only from main,
+    # because a dispatch against a topic branch would put unreviewed content on the
+    # production site.
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+        # One-time repository setup: Settings → Pages → Build and deployment →
+        # Source: GitHub Actions. Until an admin does that, this step fails with
+        # "Get Pages site failed" and nothing else is wrong.
+        #
+        # Pages limits worth remembering: 1 GB published site, ~100 GB/month of
+        # bandwidth. The sandbox transport is measured in gigabytes and never
+        # belongs here — it lives on its own orphan branch.

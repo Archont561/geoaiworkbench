@@ -47,7 +47,12 @@ pre-commit:
     - name: js-biome
       # Whole-repo enforcement is `pixi run -e bun lint-js` in `gates`; this is the
       # staged-file form, same global biome config, focused output.
-      glob: "*.{js,ts,mts,mjs,cjs,json,jsonc,css}"
+      #
+      # `astro` is in the list because biome formats an Astro component's frontmatter
+      # script, and `gates` would otherwise be the first place a docs component's
+      # drift showed up. It does not format the template below the frontmatter, which
+      # is also why biome.json turns `noUnusedVariables` off for these files.
+      glob: "*.{js,ts,mts,mjs,cjs,json,jsonc,css,astro}"
       run: pixi run -e bun -- fmt-js
 
     - name: workflows

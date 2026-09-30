@@ -1,0 +1,72 @@
+---
+title: Three paradigms
+description: MCP-5, MCP-15 and CodeGen — what each condition exposes, why the tool counts are 5 and 15, and the inverted-U the design exists to test.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+import ConditionGrid from "../../../components/ConditionGrid.astro";
+
+<Aside type="note" title="Specified, not implemented">
+  This page summarises the research design recorded under `.knowledge/`. None of it
+  is implemented in this repository — `python/geoai-mcp` is the package that *will*
+  carry an MCP server, and today it carries an import and a version test.
+</Aside>
+
+<ConditionGrid />
+
+## The tool tiers
+
+The same server code serves all three MCP configurations; the active tier is chosen
+at runtime by `GEOMCP_TIER`, so MCP-5 and MCP-15 differ in exposed surface and in
+nothing else.
+
+| Tier | Tools | In MCP-5 | In MCP-15 |
+| --- | --- | --- | --- |
+| 1 — Inspection | `layer_info`, `layer_statistics` | ✅ | ✅ |
+| 2 — Core geoprocessing | `buffer`, `clip`, `reproject` | ✅ | ✅ |
+| 3 — Extended geoprocessing | `dissolve`, `intersection`, `union`, `difference`, `merge_layers`, `centroid` | ❌ | ✅ |
+| 4–5 — Analysis and attributes | `spatial_join`, `select_by_location`, `simplify`, `calculate_field` | ❌ | ✅ |
+
+## What actually differs
+
+| Aspect | MCP-5 | MCP-15 | CodeGen |
+| --- | --- | --- | --- |
+| Tool count | 5 | 15 | unlimited |
+| Schema tokens | ~400 | ~1200 | 0 |
+| Parameter validation | Pydantic | Pydantic | none — runtime only |
+| Algorithm access | 5 specific | 15 specific | all QGIS Processing |
+| Code execution | ❌ | ❌ | ✅ |
+| Error feedback | MCP error codes | MCP error codes | stderr |
+| Self-healing | retry the call | retry the call | fix the code, re-run |
+
+## Why 5 and 15
+
+- **5** is the minimum viable GIS toolkit — buffer, clip and reproject cover most
+  basic tasks — and gives the maximum contrast with free-form code.
+- **15** is a realistic toolkit that still sits below the tool-selection degradation
+  threshold reported in the literature (~50 tools), so it tests the *early* part of
+  the curve rather than its collapse.
+- **Unlimited** is the upper bound: any Processing algorithm, custom logic, no schema
+  overhead, and no validation to catch a bad parameter before it reaches QGIS.
+
+## The prediction
+
+Performance against tool count is expected to be an inverted U: too few tools and the
+agent cannot express the task; too many and tool selection itself degrades. The
+reported sweet spot is somewhere around 15–30 tools, which is exactly the region
+MCP-15 samples. CodeGen is the free-form control that says how much of any observed
+difference is about structure at all.
+
+Hypotheses attached to each condition:
+
+- **MCP-5** — highest execution determinism, lowest flexibility, worst on advanced
+  tasks.
+- **MCP-15** — better on advanced tasks than MCP-5 at a slight determinism cost.
+- **CodeGen** — best on complex tasks, lowest determinism, highest self-healing rate.
+
+## Scale
+
+Four CLI agents × three conditions × 50 GeoAnalystBench tasks × three repetitions =
+1800 runs. The agents are treated as black boxes: no prompt surgery, no
+per-condition tuning, nothing that would make the comparison a comparison of
+prompts.

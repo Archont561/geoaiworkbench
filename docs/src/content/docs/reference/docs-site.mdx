@@ -1,0 +1,104 @@
+---
+title: Documentation site
+description: How this site is built, where its pages live, how the sidebar is wired, and what the deployment workflow does.
+---
+
+import { Aside, FileTree, Steps } from "@astrojs/starlight/components";
+
+This site is `docs/` — an [Astro](https://astro.build) +
+[Starlight](https://starlight.astro.build) app, and a member of the same Bun
+workspace as everything else, so it is built by the same `turbo run build` and
+installed by the same `bun install`.
+
+## Layout
+
+<FileTree>
+
+- docs/
+  - astro.config.mjs site, base, and the sidebar
+  - package.json workspace member `@geoaiworkbench/docs`
+  - turbo.json the one package whose build has cacheable outputs
+  - tsconfig.json extends `astro/tsconfigs/strict`
+  - public/
+    - favicon.svg
+  - src/
+    - content.config.ts the `docs` collection, via Starlight's loader
+    - content/
+      - docs/ **the pages** — Markdown and MDX
+    - components/ landing-page pieces (`FeatureGrid`, `ConditionGrid`)
+    - styles/custom.css the accent ramp and the grid primitives
+    - assets/logo.svg
+
+</FileTree>
+
+## Adding a page
+
+<Steps>
+
+1. Create `src/content/docs/<section>/<name>.mdx` with Starlight frontmatter:
+
+   ```mdx
+   ---
+   title: My page
+   description: One sentence; it becomes the meta description.
+   ---
+   ```
+
+2. Add it to the sidebar in `astro.config.mjs`, using `slug` (not `link`):
+
+   ```js
+   { label: "My page", slug: "section/name" }
+   ```
+
+   `slug` resolves against the content collection, so it is `base`-aware and
+   validated at build time — a typo fails the build instead of shipping a 404.
+
+3. Check it: `pixi run docs-build` runs `astro check` before `astro build`, so a
+   broken reference, a bad frontmatter field or an unresolved import is an error.
+
+</Steps>
+
+<Aside type="caution" title="Never hardcode `/geoaiworkbench/` in prose links">
+  The site is a GitHub Pages *project* site served from a subpath, so
+  `astro.config.mjs` sets `base: "/geoaiworkbench"`. Use relative Markdown links
+  between pages, or Starlight's `slug` in configuration. A root-absolute link written
+  as `/repository/packages/` 404s in production, and one written with the prefix
+  baked in breaks the moment the site moves.
+</Aside>
+
+## The version on the site
+
+Pages never state a release number. `pixi run docs-build` exports `GEOAI_VERSION`
+from `scripts/version.ts` — the same script `pixi run version-check` uses to assert
+every manifest agrees — and `astro.config.mjs` defines it as
+`import.meta.env.GEOAI_VERSION`. A bare `bun run build` inside `docs/` has no such
+export and falls back to `dev`, which is obviously a placeholder; a stale tag would
+not be.
+
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| `pixi run docs-dev` | Dev server with HMR on `http://localhost:4321/geoaiworkbench/`. |
+| `pixi run docs-build` | `astro check && astro build` through turbo; output in `docs/dist/`. |
+| `pixi run docs-preview` | Serve the built output locally. |
+| `pixi run -e bun bun x turbo run build --filter=@geoaiworkbench/docs` | The same build, invoked directly. |
+
+## Deployment
+
+`.github/workflows/docs.yml` builds the site on every push to `main` that touched
+`docs/`, the Python packages, `.knowledge/` or a lockfile, and on
+*Actions → docs → Run workflow*. Pull requests build but do not deploy, so a broken
+site is caught without publishing it. The build step is the same `pixi run
+docs-build` a contributor runs; the workflow itself only knows about toolchain setup
+and Pages, which is the only thing a workflow should own.
+
+<Aside type="note" title="One-time repository setup">
+  GitHub Pages must be switched to the Actions source once by an admin:
+  *Settings → Pages → Build and deployment → Source: **GitHub Actions***. Until then
+  the deploy job fails with *"Get Pages site failed"*.
+</Aside>
+
+Two Pages limits are worth remembering: a published site is capped at 1 GB and
+bandwidth at roughly 100 GB/month. The sandbox payload never belongs here — it lives
+on its own orphan branch, and it is measured in gigabytes.

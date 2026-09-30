@@ -64,3 +64,11 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# ── astro ─────────────────────────────────────────────────────────────────────
+# `docs/dist/` is already covered by the `dist/` rule above. `.astro/` is the
+# generated content-collection type tree that `astro check` reads; it is a build
+# product keyed on src/content, and committing it would put a derived file in the
+# diff of every page added. Ignoring it also keeps it away from biome, which reads
+# this file (see the header) and would otherwise format generated `.d.ts`.
+.astro/
