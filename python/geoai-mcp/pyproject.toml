@@ -1,0 +1,71 @@
+[build-system]
+requires = ["hatchling>=1.32.4,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "geoai-mcp"
+version = "0.1.0"
+license = "GPL-2.0-or-later"
+description = "GeoMCP server exposing the geospatial tool tiers for MCP-5 and MCP-15 conditions"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+authors = [{ name = "Archont561", email = "142521648+Archont561@users.noreply.github.com" }]
+keywords = ["mcp", "model-context-protocol", "gis", "pyqgis", "benchmark"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: GIS",
+]
+# `mcp` and `pydantic` are declared here and resolved from PyPI in the root
+# `[pypi-dependencies]`. pyproject `dependencies` is what a channel install reads;
+# the root table is what the benchmark's own environment resolves. They are two
+# different answers for two different consumers, which is why this file does not
+# claim the root's pins are authoritative.
+dependencies = [
+  "geoai-core>=0.1.0",
+  "mcp>=1.9,<2",
+  "pydantic>=2.12,<3",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.4,<9",
+  "pytest-cov>=7.1,<8",
+  "ruff>=0.14,<0.15",
+]
+
+[project.urls]
+Homepage = "https://github.com/Archont561/geoaiworkbench"
+Repository = "https://github.com/Archont561/geoaiworkbench"
+Issues = "https://github.com/Archont561/geoaiworkbench/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/geoai_mcp"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["python/geoai-mcp/src"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+  "ANN401",
+  "COM812",
+  "D203",
+  "D213",
+  "ISC001",
+  "S101",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D100", "D101", "D102", "D103", "INP001", "PLR2004"]
+"src/geoai_mcp/__init__.py" = ["A005"]
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.pytest.ini_options]
+testpaths = ["python/geoai-mcp/tests"]

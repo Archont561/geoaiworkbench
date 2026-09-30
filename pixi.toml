@@ -1,0 +1,398 @@
+# geoaiworkbench — THE workspace manifest.
+#
+# This file is the environment. The 1,800 benchmark runs in `.knowledge/` are only
+# reproducible if the thing that ran them can be reconstructed byte-for-byte on a
+# machine with no network, and that is what the lockfile plus the sandbox transport
+# are for. Every choice below is made for that reason first and for developer
+# convenience second.
+#
+# ── feature layers ────────────────────────────────────────────────────────────
+# Four layers, so a version bump to one toolchain is its own reviewable diff and
+# `default` is a deliberate statement rather than an accident of whatever was last
+# added:
+#
+#   qgis     QGIS + the interpreter its PyQGIS bindings were built against
+#   python   the benchmark toolchain: pytest, pytest-cov, hatchling, pip, ruff
+#   bun      bun — the only JavaScript runtime here (docs, agent tooling, turbo)
+#   utils    this repository's own instruments: convco, lefthook, actionlint, taplo
+#
+# ── the icu ceiling — read this before bumping QGIS ───────────────────────────
+# `qgis` is pinned at `>=3.44.7` and MUST NOT be raised to 3.44.9 without
+# splitting the environment. Verified against conda-forge by qgis-rs, whose
+# pixi.toml documents the same constraint:
+#
+#   qgis  3.44.9 | 3.44.11 | 3.44.14   requires  icu >=78.3,<79.0a0
+#   bun   1.3.7  | 1.3.9  | 1.3.10 | 1.3.11  requires  icu >=75.1,<76.0a0
+#
+# There is no icu satisfying both, so a single environment carrying QGIS and bun
+# stops solving the moment the solver is allowed to prefer a newer QGIS. The
+# `>=3.44.7` floor is what currently resolves down to 3.44.7, the last QGIS that
+# agrees with bun's icu. `pixi.lock` records icu 75.1 for exactly this reason.
+#
+# The fix is qgis-rs's two-environment shape: `default` (QGIS, QGIS-free of bun)
+# and `bun`, with `.pixi-sandbox.toml` packing both. That is a deliberate,
+# separately-reviewable change and is tracked as a backlog task — it is not done
+# here, so this manifest must keep `bun` and `qgis` in one environment and must
+# keep the QGIS floor where it is. See `.knowledge/08-technology-decisions/qgis-version-3.44.md`.
+#
+# ── why the toolchain is pinned and not inherited ────────────────────────────
+# `pixi.lock` records the exact interpreter QGIS was solved against, so a
+# contributor's system python cannot decide whether `pixi run gates` passes. That
+# mattered before there was source and matters more now: a dependency needing a
+# newer CPython than the lockfile names fails in CI and nowhere else.
+#
+# `python = "3.12.*"` is therefore a tight pin, not a preference. conda-forge ships
+# qgis as per-ABI builds, and its PyQGIS bindings only import under the exact
+# interpreter they were compiled against (qgis 3.44.7 → python_abi 3.12). A range
+# would let the solver drift onto another ABI, which fails at `import qgis`, not at
+# solve time. To move Python, change this pin AND the `requires-python` in every
+# `python/*/pyproject.toml` AND the `python` host-dependency in every
+# `python/*/pixi.toml` — then `pixi lock`.
+#
+# ── there is no Node.js anywhere in this manifest ─────────────────────────────
+# `bun` is the only JavaScript runtime. Turbo, biome, backlog and the skills CLI
+# are workspace packages resolved from the root `bun.lock`, not conda
+# dependencies, so one lockfile decides both the linter and the version its
+# `biome.json` schema names. Tasks therefore reach JS tooling through `bun run` /
+# `bun x`, never through a `node_modules/.bin` path — those entries carry a `node`
+# shebang that no environment here provides.
+#
+# ── the Python toolchain lives IN the environment, not in a venv ──────────────
+# conda-forge carries the interpreter, pip, pytest, pytest-cov, ruff and
+# hatchling, so the whole toolchain is one `pixi.lock`. A venv layered on top
+# would hide QGIS's own site-packages, and a second interpreter on PATH is exactly
+# how you get a wheel built for one ABI and imported by another.
+#
+# ── why the Python packages are conda packages, not pip installs ──────────────
+# Every package under `python/` carries a `[package]` table in its own
+# `pixi.toml` and is registered in the root as a *path source dependency*:
+#
+#     [feature.qgis.dependencies]
+#     geoai-core = { path = "python/geoai-core" }
+#
+# That makes `pixi install` build each one with its declared
+# `pixi-build-python` backend and install it into the root `default` environment,
+# editable, so `import geoai_core` works from the repository root and from any
+# process the root environment starts. The alternative — `pip install -e` from a
+# task — builds the same wheel but leaves the package absent from `pixi.lock`, so
+# an airlock restore would not have it and the sandbox would differ from the
+# developer's machine. The path source dependency is the difference between
+# "installed here" and "recorded in the environment".
+#
+# Pins (verified 2026-09-30): qgis 3.44.7, python 3.12.*, bun 1.3.x, convco 0.7.x,
+# lefthook 2.1.x, actionlint 1.7.x, taplo 0.10.x (conda-forge). Adding a pin means
+# one `pixi lock` to refresh pixi.lock — `pixi install --locked` in CI and the
+# devcontainer fails until that lands.
+
+[workspace]
+name = "geoaiworkbench"
+version = "0.1.0"
+description = "Controlled empirical comparison of three paradigms for LLM-driven GIS automation"
+authors = ["Archont561 <142521648+Archont561@users.noreply.github.com>"]
+license = "GPL-2.0-or-later"
+homepage = "https://github.com/Archont561/geoaiworkbench"
+repository = "https://github.com/Archont561/geoaiworkbench"
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+requires-pixi = ">=0.81.0"
+# `[package]` tables are a PREVIEW feature upstream. It is opted into here, in the
+# one manifest that owns the workspace: opting in per package would mean a
+# workspace whose members disagree about whether building is allowed.
+preview = ["pixi-build"]
+
+# ── one place to bump a version ───────────────────────────────────────────────
+# The tables below opt in with `{ workspace = true }`. `pixi run version-check`
+# walks the manifests and fails on a literal, so the five places that carry 0.1.0
+# (this file and four pyproject.toml files) cannot drift.
+[workspace.dependencies]
+# The interpreter QGIS was built against — see the icu note in the header.
+python = "3.12.*"
+qgis = ">=3.44.7,<4"
+bun = ">=1.3.11,<2"
+pytest = ">=8.4,<9"
+pytest-cov = ">=7.1,<8"
+# hatchling is the build backend for every package under `python/`. It is a conda
+# dependency, not a pip one, so the build needs no network and no build isolation:
+# `pixi-build-python` hands the already-installed backend the interpreter that is
+# already in the environment.
+hatchling = ">=1.32.4,<2"
+# pip, because an editable install of anything the path source dependencies do not
+# cover is a build, and without a backend in the environment pip would fetch one
+# into a temporary venv on every run. It is `python -m pip`, never a bare `pip`:
+# PATH is not trustworthy inside a task.
+pip = ">=24,<27"
+ruff = ">=0.14,<0.15"
+# convco, lefthook, actionlint and taplo are conda dependencies, not npm ones: the
+# git hooks must work on a machine restored from the sandbox branch, and
+# `scripts/restore.sh` puts a restored environment's `bin/` on PATH but no
+# `node_modules`.
+convco = ">=0.7.2,<0.8"
+lefthook = ">=2.1.15,<3"
+actionlint = ">=1.7.12,<2"
+taplo = ">=0.10.0,<0.11"
+
+# ── PyPI surface ──────────────────────────────────────────────────────────────
+# The libraries the harness and the MCP server are written against.
+#
+# Declared here rather than in a conda feature because `mcp` — the Model Context
+# Protocol Python SDK — is not a conda-forge package, so at least one of these four
+# cannot come from conda. Declaring all four in one table keeps the statement "this
+# is the list of PyPI requirements" true and in one place; pixi's solver is still
+# free to satisfy typer, rich and pydantic from conda-forge, and on the current solve
+# it does. That is the intended behaviour and not a contradiction of the comment
+# above: the table records *what the harness needs*, not which index served it.
+#
+# The reason it is not merely "put them all in conda" is the failure mode the single
+# table avoids. Two channels serving the same name is how an environment ends up with
+# one pydantic from conda and another from PyPI, and the resulting ImportError names
+# neither.
+[pypi-dependencies]
+typer = ">=0.15,<1"
+rich = ">=13.9,<15"
+mcp = ">=1.9,<2"
+pydantic = ">=2.12,<3"
+# The odd one out: a test tool rather than a runtime dependency, and conda-forge has
+# no `pytest-qgis` at all — asking for it as a conda dependency is a solve error, not
+# a fallback. It ships the headless QgsApplication fixture any test touching a layer
+# will need, and it creates a `.qgis-settings/` profile directory under the pytest
+# rootdir on every run (documented behaviour, hence the .gitignore rule). No scaffold
+# test uses it yet; it is here so the first real QGIS test does not also have to
+# solve the environment.
+pytest-qgis = ">=4.1.1,<5"
+
+# ── feature layers ────────────────────────────────────────────────────────────
+# The root `[dependencies]` table is intentionally empty; every dependency lives in
+# a feature so each environment installs only what it needs.
+[feature.python-toolchain.dependencies]
+# The benchmark toolchain. Declared as its own layer rather than folded into
+# `qgis` so the test and lint verbs stay readable in the environments table.
+python = { workspace = true }
+pytest = { workspace = true }
+pytest-cov = { workspace = true }
+ruff = { workspace = true }
+hatchling = { workspace = true }
+pip = { workspace = true }
+
+[feature.qgis.dependencies]
+qgis = { workspace = true }
+
+# The three Python packages, as path source dependencies. This table is the answer
+# to "register all packages of python locally to be available from root": each name
+# resolves to a directory carrying its own `[package]` table, and `pixi install`
+# builds and installs it into this environment.
+geoai-core = { path = "python/geoai-core" }
+geoai-mcp = { path = "python/geoai-mcp" }
+geoai-bench = { path = "python/geoai-bench" }
+
+[feature.bun.dependencies]
+# The only JavaScript runtime in the project. See the icu note before adding
+# anything that needs a different icu than 75.1.
+bun = { workspace = true }
+
+[feature.utils.dependencies]
+# Repository instruments shared by the git hooks and CI, so the two cannot drift.
+#   convco     — conventional-commit check (commit-msg hook) + CHANGELOG.md
+#   lefthook   — the hooks themselves; every hook delegates to a task below
+#   actionlint — the GitHub Actions linter
+#   taplo      — canonical formatting for pixi.toml and .pixi-sandbox.toml
+convco = { workspace = true }
+lefthook = { workspace = true }
+actionlint = { workspace = true }
+taplo = { workspace = true }
+
+[feature.qgis.activation.env]
+# conda-forge's `qgis` package already exports these through
+# etc/conda/activate.d/qgis-activate.sh, which pixi runs for `pixi run` and
+# `pixi shell`. They are repeated here so `import qgis` does not depend on
+# remembering that, and so the paths are visible in the manifest. Every benchmark run
+# this project will make is headless: without QT_QPA_PLATFORM=offscreen the first
+# QGIS application init opens a display that a CI runner does not have, and the
+# failure is a Qt abort rather than a message about the display.
+# ($VAR syntax: activation runs under bash; platforms are linux-64 only.)
+PYTHONPATH = "$CONDA_PREFIX/share/qgis/python/plugins:$CONDA_PREFIX/share/qgis/python:$PYTHONPATH"
+QGIS_PREFIX_PATH = "$CONDA_PREFIX"
+QT_QPA_PLATFORM = "offscreen"
+
+# ── environments ──────────────────────────────────────────────────────────────
+[environments]
+# `default` is pixi's implicit environment, so every task is `pixi run <task>`
+# with no `-e` flag — in a shell, in a git hook, or in a workflow step.
+#
+# ONE environment, deliberately. The two-environment split the header describes is
+# the right end state and is a backlog task, but doing it now would mean two
+# lockfiles, two installs in every CI job, and `bun` tasks needing
+# `default-environment = "bun"` — all of it for a QGIS bump that has not been asked
+# for. While it stays one environment, `qgis` and `bun` share this solve and the
+# QGIS floor must not move.
+default = { features = ["qgis", "python-toolchain", "bun", "utils"] }
+
+# ---------------------------------------------------------------------------
+# Tasks. Everything a human, a git hook or a CI job does is one of these, so a
+# GitHub Actions step can be a single line: `pixi run <task>`. Logic lives here
+# (reviewable, runnable locally), not in workflow YAML.
+#
+# The per-package verbs (build / test / lint / fmt / cov) are NOT here: each
+# package owns its own commands in its own `package.json` and turbo orders and
+# caches them, so `pixi run test` still runs every package's tests and a CI step is
+# still one line. What stays here is repository-global work with no single package
+# to belong to.
+#
+# NOTE (pixi 0.81): `default-environment` is only accepted on tasks that have a
+# `cmd`. Pure aggregators (setup / gates / ci) omit it.
+# ---------------------------------------------------------------------------
+[tasks]
+
+# ── setup ─────────────────────────────────────────────────────────────────────
+# One install for the whole Bun workspace: the root package.json declares the
+# members and the root bun.lock is the single resolution record. Every turbo task
+# depends on this, so `pixi run test` works on a fresh clone — and turbo itself is
+# a workspace dependency, so without it there is no orchestrator to run.
+#
+# Note what is NOT here: any `pip install -e python/*`. Those packages are already
+# in the environment as path source dependencies; a task that pip-installed them
+# would build a second, differently-resolved copy.
+bun-install = { cmd = "bun install --frozen-lockfile", description = "Install the Bun workspace from the root lockfile" }
+# Install the git hooks. Run once per clone; `lefthook install` is idempotent.
+hooks-install = { cmd = "lefthook install", description = "Install the lefthook git hooks into .git/hooks" }
+setup = { description = "Materialise the workspace: pixi environment, Bun workspace, git hooks", depends-on = [
+  "bun-install",
+  "hooks-install",
+] }
+
+# ── repo-wide task graph (turbo) ──────────────────────────────────────────────
+# Each reaches turbo through `bun run <script>` in the root package.json, never
+# through a `node_modules/.bin` path. `turbo run <task>` fans out to every package
+# that declares that script and skips the ones that do not — so `test` runs pytest
+# for all three Python packages under one command and one cache. The
+# `depends-on` here is only what a clone needs before turbo can start.
+build = { cmd = "bun run all:build", depends-on = [
+  "bun-install",
+], description = "Build every package that has a build" }
+test = { cmd = "bun run all:test", depends-on = [
+  "bun-install",
+], description = "Run every package's tests" }
+lint = { cmd = "bun run all:lint", depends-on = [
+  "bun-install",
+], description = "Lint every package" }
+# The repository's own JSON and TypeScript. Separate from `lint` on purpose: `lint`
+# is a turbo fan-out over *packages*, and biome has nothing to say about a Python
+# package. This task covers the files with no package to belong to — turbo.json,
+# biome.json, the workflow-adjacent config, scripts/*.ts. Biome reads .gitignore
+# (see biome.json), so the pixi and Bun trees are excluded without being named here.
+lint-js = { cmd = "bun x biome check .", depends-on = [
+  "bun-install",
+], description = "Lint and format-check the repository's JSON and TypeScript" }
+fmt-js = { cmd = "bun x biome check --write .", depends-on = [
+  "bun-install",
+], description = "Rewrite the repository's JSON and TypeScript with biome" }
+cov = { cmd = "bun run all:cov", depends-on = [
+  "bun-install",
+], description = "Measure coverage for every package that reports it" }
+fmt = { cmd = "bun run all:fmt", depends-on = [
+  "bun-install",
+], description = "Rewrite every package with its formatter" }
+# No `advisories` task yet. Three ecosystems would each need one (conda/pip, Bun,
+# and the GitHub Actions that are pinned rather than audited), and a task that names
+# one of them without naming the other two is a task that reads as coverage. It also
+# needs the network, which is why it would sit outside `gates` even once it exists:
+# a gate that fails because the network was unreachable trains people to ignore gates.
+# The seam is a package-level `advisories` script plus one entry in turbo.json.
+
+# ── versions ──────────────────────────────────────────────────────────────────
+# Every publishable surface shares one number. `version-check` is in `gates`, so
+# forgetting to bump a manifest fails before a commit lands rather than after a
+# release. Five manifests carry the version: this file and four pyproject.toml.
+version = { cmd = "bun \"$PIXI_PROJECT_ROOT/scripts/version.ts\"", depends-on = [
+  "bun-install",
+], description = "Print the workspace version from the manifest that owns it" }
+version-check = { cmd = "bun \"$PIXI_PROJECT_ROOT/scripts/version.ts\" --check", depends-on = [
+  "bun-install",
+], description = "Assert every release manifest agrees with the workspace version" }
+version-set = { cmd = "bun \"$PIXI_PROJECT_ROOT/scripts/version.ts\" --set", depends-on = [
+  "bun-install",
+], description = "Set the release version in every manifest that owns a literal" }
+
+# ── repo utilities (lefthook + CI share these) ─────────────────────────────────
+# Conventional-commit check for the `commit-msg` hook; reads the proposed message
+# from stdin (git passes it via {1} in lefthook.yml).
+lint-commit = { cmd = "convco check --from-stdin", description = "Validate a commit message against the conventional-commit spec" }
+changelog = { cmd = "convco changelog > CHANGELOG.md", description = "Regenerate CHANGELOG.md from conventional commits" }
+changelog-preview = { cmd = "convco changelog", description = "Print the changelog convco would write, without writing it" }
+# Scans .github/workflows/*.yml by default. Repository-global, so it stays a pixi
+# task and is called by `gates` directly rather than through turbo.
+lint-actions = { cmd = "actionlint", description = "Lint the GitHub Actions workflows" }
+# A wrapper, not a bare `taplo format --check`: with no path taplo walks the whole
+# working tree and "found" 107 files, 100 of them PyQt5's vendored pyproject.toml
+# files under .pixi/envs. Only the two root manifests are kept in taplo's canonical
+# form — the rest of the repository uses the aligned-`=` style deliberately — so
+# scripts/lint-toml.sh names those two, and takes staged files as arguments instead
+# when lefthook calls it.
+lint-toml = { cmd = "bash scripts/lint-toml.sh", description = "Check taplo canonicality for pixi.toml and .pixi-sandbox.toml" }
+
+# ── the Python packages ───────────────────────────────────────────────────────
+# No install task. The packages are path source dependencies in the environment
+# table above, so `pixi install` is what materialises them and `pixi run verify-
+# packages` is how a change proves all three are importable from the root.
+verify-packages = { cmd = "python -c \"import geoai_core, geoai_mcp, geoai_bench; print('registered packages importable from the root environment:', geoai_core.__name__, geoai_mcp.__name__, geoai_bench.__name__)\"", description = "Assert every python/ package is importable from the root environment" }
+# `pixi publish --dry-run` still resolves the full publish set, which is why it is
+# a gate: it fails on a package whose build dependencies do not solve, before
+# anything uploads.
+publish-plan = { cmd = "pixi publish --dry-run", description = "Resolve and print the publish set without building or uploading" }
+publish-dist = { cmd = "pixi publish --target-dir dist", description = "Build the publishable packages into dist/" }
+
+# ── documentation site ─────────────────────────────────────────────────────────
+# No docs site in this prototype, and so no tasks: a `docs-dev` task with `cwd =
+# "docs"` against a directory that does not exist fails at task resolution with a
+# message about a missing directory, which is a worse first impression of the
+# project than an absent feature. The seam is three lines here plus a `docs/`
+# workspace member; the QGIS-flavoured precedent is qgis-rs.
+
+# ── agent tooling ──────────────────────────────────────────────────────────────
+# The packages are installed in the root Bun workspace and invoked through `bun x`,
+# which uses Bun instead of their Node shebangs. That keeps the commands usable in
+# a restored sandbox environment, which has no Node.js runtime.
+backlog = { cmd = "bun x backlog", depends-on = [
+  "bun-install",
+], description = "Manage the Markdown project backlog" }
+skills = { cmd = "bun x skills", depends-on = [
+  "bun-install",
+], description = "Manage agent skills" }
+opencode-install = 'BUN_BIN="$(bun pm bin -g)" && bun add -g opencode-ai@1.18.33 && (ln -sfn "$BUN_BIN/opencode" /usr/local/bin/opencode 2>/dev/null || (mkdir -p "$HOME/.local/bin" 2>/dev/null && ln -sfn "$BUN_BIN/opencode" "$HOME/.local/bin/opencode" 2>/dev/null) || echo "opencode installed to $BUN_BIN, which is not on PATH: neither /usr/local/bin nor ~/.local/bin is writable")'
+setup-opencode = { depends-on = [
+  "opencode-install",
+], cmd = "\"$(bun pm bin -g)/opencode\" models --refresh" }
+
+# ── sandbox transport (pixi-sandbox) ───────────────────────────────────────────
+# pack -> doctor -> publish, locally. `pixi-sandbox` is not a conda dependency; it
+# is a static release binary, installed by the checksum-verified one-liner in its
+# README. `.pixi-sandbox.toml` has `cargo_vendor = false` because this repository
+# has no Cargo workspace — that flag is the only thing in the transport that would
+# have been misleading.
+sandbox-plan = { cmd = "pixi-sandbox plan --config .pixi-sandbox.toml", description = "Validate the reviewed sandbox publish plan" }
+sandbox-pack = { cmd = "pixi-sandbox pack --repo-root . --envs default --output-dir .sandbox-out --platform linux-64 --fetch-tools --self-bin $SANDBOX_SELF_BIN", description = "Pack the offline sandbox transport" }
+sandbox-doctor = { cmd = "pixi-sandbox doctor --branch-location .sandbox-out --verify", description = "Verify a packed transport without writing anything" }
+sandbox-publish = { cmd = "pixi-sandbox publish --input-dir .sandbox-out --branch-name sandbox/developer-linux-64 --remote origin", description = "Publish the transport to its orphan branch" }
+sandbox-restore = { cmd = "bash scripts/restore.sh", description = "Restore the offline sandbox from its orphan branch" }
+
+# ── gates ──────────────────────────────────────────────────────────────────────
+# The fast loop: everything that must pass before a commit lands, and nothing that
+# needs the network. This list is the single owner of "what must pass" — scripts/ci.sh
+# does not restate it, it calls this task. One owner, or the local gate and CI drift.
+#
+# `lint-toml` is scoped to two files and `lint-actions` is repository-global; neither
+# is a turbo fan-out, which is why they appear here by name rather than under `lint`.
+gates = { description = "Every check that must pass before a commit lands", depends-on = [
+  "lint",
+  "lint-js",
+  "lint-toml",
+  "lint-actions",
+  "test",
+  "version-check",
+  "verify-packages",
+  "publish-plan",
+] }
+# The gate plus the producers, in an order chosen for how fast each check fails
+# rather than for the task graph. This is a script and not a `depends-on` list
+# because the ordering is the whole point: a broken Actions workflow is a
+# ten-second finding and should not wait behind a pytest run.
+ci = { cmd = "bash scripts/ci.sh", description = "The full gate: repo lints, package lints and tests, format drift, built packages, coverage" }

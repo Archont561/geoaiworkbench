@@ -1,0 +1,22 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "//": "Every Python package sets `cache: false` on every task. The reason is not that these tasks are expensive \u2014 they are the cheapest in the repository \u2014 it is that turbo hashes package inputs, and the thing that actually determines a Python result is the *environment*, which lives in `.pixi/envs` and is outside every package directory. A cache hit keyed on source that did not change would happily replay a result produced against a different `pixi.lock`. Handing that back to the instrumented coverage run and to `pixi install` is the point: they own the output, and the cost of running pytest three times is smaller than the cost of a stale green.",
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "cache": false
+    },
+    "test": {
+      "cache": false
+    },
+    "lint": {
+      "cache": false
+    },
+    "cov": {
+      "cache": false
+    },
+    "fmt": {
+      "cache": false
+    }
+  }
+}

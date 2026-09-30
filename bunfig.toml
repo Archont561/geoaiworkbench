@@ -1,0 +1,14 @@
+# Bun runtime configuration.
+#
+# `[install]` is the important table. `bun x backlog` and `bun x skills` are how the
+# agent tooling is reached, and both are workspace devDependencies rather than conda
+# packages. `exact = true` is what makes that safe: a `bun x` that resolved a
+# floating range would be a second version of the backlog CLI than the one
+# `bun.lock` records, so a task file written by one agent could be unreadable by the
+# next. Exact versions plus a committed lockfile make the toolchain the same on a
+# developer's machine, in CI, and on an airlock host.
+[install]
+exact = true
+# The root bun.lock is the single resolution record. Members carry no lockfile of
+# their own; a lock under python/ would be a second answer for one dependency graph.
+lockfile = true

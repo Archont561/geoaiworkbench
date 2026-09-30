@@ -1,0 +1,14 @@
+{
+  "//": "Turbo fa\u00e7ade for geoai-mcp. See python/geoai-core/package.json for the two rules: `cd` to the repository root first, and never reach a tool through node_modules/.bin.",
+  "name": "@geoaiworkbench/mcp",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "build": "pixi run verify-packages",
+    "test": "cd ../.. && python -m pytest python/geoai-mcp/tests -q",
+    "lint": "cd ../.. && ruff check python/geoai-mcp && ruff format --check python/geoai-mcp",
+    "fmt": "cd ../.. && ruff check --fix python/geoai-mcp && ruff format python/geoai-mcp",
+    "cov": "cd ../.. && COVERAGE_FILE=.coverage.geoai_mcp python -m pytest python/geoai-mcp/tests --cov=geoai_mcp --cov-report=xml:python/geoai-mcp/coverage.xml --cov-report=term-missing"
+  },
+  "//cov": "COVERAGE_FILE is not optional. turbo runs all three cov tasks concurrently in the same working directory, and coverage's default data file is the single path ./.coverage \u2014 so the three runs interleave writes to one SQLite file and each report ends up containing every package's numbers (observed: geoai-core's report listing all three packages, geoai-mcp's listing two). The numbers stay plausible, which is the dangerous part: nothing looks wrong, the merged total is just wrong. One data file per package is the fix; a per-package data_file in pyproject.toml would work too but is invisible at the point where the collision happens."
+}

@@ -1,0 +1,45 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "ui": "stream",
+  "globalDependencies": ["biome.json", "pixi.toml", "pixi.lock"],
+  "globalPassThroughEnv": [
+    "CONDA_PREFIX",
+    "CONDA_DEFAULT_ENV",
+    "CONDA_PKGS_DIRS",
+    "PYTHONPATH",
+    "QGIS_PREFIX_PATH",
+    "QT_QPA_PLATFORM",
+    "QT_PLUGIN_PATH",
+    "GDAL_DATA",
+    "GDAL_DRIVER_PATH",
+    "PROJ_DATA",
+    "PROJ_LIB",
+    "XML_CATALOG_FILES",
+    "GSETTINGS_SCHEMA_DIR",
+    "SSL_CERT_FILE",
+    "SSL_CERT_DIR",
+    "SSL_CERT_PATH",
+    "REQUESTS_CA_BUNDLE",
+    "CURL_CA_BUNDLE"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "test": {
+      "dependsOn": ["build"],
+      "outputs": []
+    },
+    "lint": {
+      "outputs": []
+    },
+    "cov": {
+      "dependsOn": ["build"],
+      "outputs": ["coverage.xml"]
+    },
+    "fmt": {
+      "cache": false
+    }
+  }
+}

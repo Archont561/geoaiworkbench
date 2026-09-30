@@ -1,0 +1,66 @@
+# Load-bearing: biome.json sets `vcs.useIgnoreFile`, so biome reads THIS file to
+# decide what not to lint. A rule deleted here does not only untrack a directory, it
+# also hands that directory to `bun x biome check .` — including, historically, the
+# 2.9 GB tree under `.pixi/envs`. `.ignore` is not used: a second ignore file is a
+# second source of truth for the same decision.
+#
+# Note the absence of a `_*` rule. A file called `_common.sh` is a normal filename;
+# the reference repository that warns about it did so because it *had* that rule.
+
+# ── pixi ──────────────────────────────────────────────────────────────────────
+# The whole directory, not `.pixi/*` with an exception. `.pixi/config.toml` is
+# generated from `pixi.toml`, which is the source of truth, so committing it would
+# put a derived file in the diff of every environment change.
+.pixi/
+
+# ── sandbox transport ─────────────────────────────────────────────────────────
+# Packed output from `pixi run sandbox-pack`, and the vendored tree a restore
+# writes next to the code it restored. Both are large, both are reproducible from
+# `.pixi-sandbox.toml`, and the second is *derived from the working tree*, so
+# ignoring it is what stops a restore from showing up as a change to the repo.
+.sandbox-out/
+.pixi-sandbox/
+
+# ── javascript ────────────────────────────────────────────────────────────────
+node_modules/
+.turbo/
+*.tsbuildinfo
+
+# ── python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+build/
+dist/
+*.egg-info/
+
+# ── coverage ──────────────────────────────────────────────────────────────────
+# Written by `pixi run cov` and uploaded by CI. The XML is a build product of the
+# gate, not a source file.
+coverage.xml
+.coverage
+.coverage.*
+htmlcov/
+coverage/
+
+# ── QGIS runtime state ────────────────────────────────────────────────────────
+# pytest-qgis creates one of these under each package's pytest rootdir on every run,
+# which its own documentation says to expect. They are SQLite profile databases and
+# a QGIS3.ini — user state, not source. Loading biome's `useIgnoreFile` means an
+# unlisted `.qgis-settings/` would also be handed to the JSON linter, and the `.ini`
+# files inside it are exactly the kind of machine-written config it would reformat.
+.qgis-settings/
+
+# ── editors and OS ────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.orig
+*.rej
+
+# Local overrides. `.env` is listed because a restored sandbox is expected to work
+# without any of it, so a file this name holds is by definition a local secret.
+.env
+.env.*
+!.env.example

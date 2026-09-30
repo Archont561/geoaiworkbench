@@ -1,0 +1,24 @@
+{
+  "name": "geoaiworkbench (Pixi + OpenCode)",
+  // The pixi base image, not a generic Python one: this project's interpreter, QGIS
+  // and bun all come from one conda solve, and an image that installs its own Python
+  // first is an image with two interpreters on PATH.
+  "image": "ghcr.io/prefix-dev/pixi:0.81.0",
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "username": "vscode",
+      "installZsh": false,
+      "installOhMyZsh": false,
+      "upgradePackages": false
+    }
+  },
+  "remoteUser": "vscode",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "containerEnv": {
+    // QGIS needs this even on a container with no display: without it QApplication
+    // tries to open a real one and the process aborts with a Qt message rather than
+    // a Python exception. The airlock gate sets it too, for the same reason.
+    "QT_QPA_PLATFORM": "offscreen"
+  },
+  "postCreateCommand": "bash .devcontainer/setup.sh"
+}

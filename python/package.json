@@ -1,0 +1,6 @@
+{
+  "//": "Makes `python/` a turbo workspace member, which is what causes `python/turbo.json` to be read. The nested turbo.json sets `cache: false` on every task and `extends: [\"//\"]` inherits the dependency graph and outputs from the root; without this package.json the nested file is inert and turbo would cache a pytest result keyed on source that a `pixi.lock` change underneath invalidates. Intentionally no scripts: a container package exists for its turbo.json, not for commands, and an aggregator here would be a second entry point over tasks the root already fans out.",
+  "name": "@geoaiworkbench/python",
+  "private": true,
+  "version": "0.1.0"
+}

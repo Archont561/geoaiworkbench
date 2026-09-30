@@ -1,0 +1,42 @@
+# python/geoai-bench/pixi.toml — the `geoai-bench` conda package.
+#
+# The GeoAnalystBench harness: task loading, the four CLI agents, the run
+# orchestrator and the metrics that `.knowledge/03-metrics/` specifies. Pure
+# Python, so `noarch: python`.
+#
+# The `typer` and `rich` run dependencies are the harness's user-facing surface
+# (the `geoai-bench` CLI) and its progress output. They are declared here as conda
+# packages AND pinned in the root `[pypi-dependencies]`, deliberately: the root pin
+# is what the 1,800 runs resolve against, and this declaration is what a user of the
+# published package resolves against. One of the two has to be authoritative for a
+# given install, and the split above says which is which.
+
+[package]
+name = "geoai-bench"
+version = { workspace = true }
+publish = true
+license = "GPL-2.0-or-later"
+description = "GeoAnalystBench harness: task corpus, CLI agents and run orchestration"
+readme = "README.md"
+repository = "https://github.com/Archont561/geoaiworkbench"
+homepage = "https://github.com/Archont561/geoaiworkbench"
+
+[package.build]
+backend = { name = "pixi-build-python", version = ">=0.8,<0.9", channels = [
+  "https://prefix.dev/conda-forge",
+] }
+
+[package.build.config]
+noarch = true
+
+[package.build-dependencies]
+hatchling = ">=1.32.4,<2"
+
+[package.host-dependencies]
+python = ">=3.12,<3.13"
+hatchling = ">=1.32.4,<2"
+
+[package.run-dependencies]
+python = ">=3.12,<3.13"
+typer = ">=0.15,<1"
+rich = ">=13.9,<15"

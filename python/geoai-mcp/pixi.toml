@@ -1,0 +1,46 @@
+# python/geoai-mcp/pixi.toml — the `geoai-mcp` conda package.
+#
+# The GeoMCP server behind conditions A (MCP-5) and B (MCP-15) of the experiment.
+# Pure Python on top of the MCP SDK, so `noarch: python`.
+#
+# The MCP SDK comes from PyPI, not conda-forge. That is the whole reason
+# `ignore-pypi-mapping` is off here and on in the sibling packages: a conda package
+# CANNOT satisfy a PyPI dependency at install time, so if the published artefact
+# declared `dependencies = ["mcp"]` in pyproject.toml without a mapping, a user on
+# `pixi add geoai-mcp` would get a package whose own dependency is unsatisfiable.
+# Mapping is what bridges the two. The cost is that the mapping service is on the
+# critical path of a build, which is why `mcp` is also pinned in the root
+# `[pypi-dependencies]`: the root environment is the one the 1,800 runs use, and it
+# must not depend on a mapping service resolving correctly at install time.
+
+[package]
+name = "geoai-mcp"
+version = { workspace = true }
+publish = true
+license = "GPL-2.0-or-later"
+description = "GeoMCP server exposing the geospatial tool tiers for MCP-5 and MCP-15 conditions"
+readme = "README.md"
+repository = "https://github.com/Archont561/geoaiworkbench"
+homepage = "https://github.com/Archont561/geoaiworkbench"
+
+[package.build]
+backend = { name = "pixi-build-python", version = ">=0.8,<0.9", channels = [
+  "https://prefix.dev/conda-forge",
+] }
+
+[package.build.config]
+noarch = true
+
+[package.build-dependencies]
+hatchling = ">=1.32.4,<2"
+
+[package.host-dependencies]
+python = ">=3.12,<3.13"
+hatchling = ">=1.32.4,<2"
+
+[package.run-dependencies]
+python = ">=3.12,<3.13"
+# qgis is the whole point: the conda-forge package ships the PyQGIS bindings under
+# $CONDA_PREFIX/share/qgis/python *and* depends on the interpreter they were built
+# against, so `python` being declared separately here can never drift out of sync.
+qgis = ">=3.44.7,<4"

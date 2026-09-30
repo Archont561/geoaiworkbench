@@ -1,0 +1,89 @@
+[build-system]
+# hatchling because it is in the environment: `pixi-build-python` hands this package
+# to the interpreter and backend that pixi.lock already pinned, with no network
+# access and no build isolation. setuptools would be the other candidate, and it is
+# not chosen: pip would fetch it into a temporary venv on every build.
+requires = ["hatchling>=1.32.4,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "geoai-core"
+# Inherits from the workspace in pixi.toml rather than restating the literal:
+# `pixi run version-check` fails on a literal, so this cannot drift.
+version = "0.1.0"
+license = "GPL-2.0-or-later"
+description = "Protocol-independent core types for the GeoAIWorkbench benchmark"
+readme = "README.md"
+# The Python this wheel supports is the one QGIS is bundled with, not a range of its
+# own. Keep this in step with `python` in the root pixi.toml and the
+# `python` host-dependency in this directory's pixi.toml.
+requires-python = ">=3.12,<3.13"
+authors = [{ name = "Archont561", email = "142521648+Archont561@users.noreply.github.com" }]
+keywords = ["geospatial", "gis", "benchmark", "mcp", "pyqgis"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: GIS",
+]
+# Declared, not resolved. The dependencies are already in the pixi environment (see
+# the root `[pypi-dependencies]`) and the path source dependency installs this
+# package with no resolution of its own. pip reads this table when the package is
+# installed from a channel, where those libraries come from wherever the user gets
+# them.
+dependencies = ["pydantic>=2.12,<3"]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.4,<9",
+  "pytest-cov>=7.1,<8",
+  "ruff>=0.14,<0.15",
+]
+
+[project.urls]
+Homepage = "https://github.com/Archont561/geoaiworkbench"
+Repository = "https://github.com/Archont561/geoaiworkbench"
+Issues = "https://github.com/Archont561/geoaiworkbench/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/geoai_core"]
+
+[tool.ruff]
+# 100 columns, matching biome's `lineWidth`, so a diff rewritten by one tool is not
+# re-rejected by the other.
+line-length = 100
+target-version = "py312"
+# The src layout hides the package from ruff's import resolution unless it is told
+# where it is. The turbo façade (python/geoai-core/package.json) `cd`s to the
+# repository root before running ruff, so this `src` is resolved from there.
+src = ["python/geoai-core/src"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+  "ANN401", # `Any` is the honest type for a JSON document
+  "COM812", # missing trailing comma: conflicts with the formatter
+  "D203",    # one-line docstring summary: incompatible with D211
+  "D213",    # multi-line summary: incompatible with D212
+  "ISC001",  # implicit string concat: conflicts with the formatter
+  "S101",    # assert: the whole point of a test suite
+]
+
+[tool.ruff.lint.per-file-ignores]
+# INP001: a `tests/` directory is a directory of tests, not a package, and pytest
+# collects it by path. Requiring `__init__.py` here would only make the test files
+# importable as `tests.test_x`, which nothing does.
+"tests/*" = ["D100", "D101", "D102", "D103", "INP001", "PLR2004"]
+"src/geoai_core/__init__.py" = ["A005"]
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.pytest.ini_options]
+# `testpaths` and `pythonpath` are absolute-from-root because the turbo façade
+# (python/geoai-core/package.json) `cd`s to the repository root before running
+# pytest. The package itself is installed into the environment as a path source
+# dependency, so `pythonpath` is a fallback for a checkout whose environment has not
+# been installed yet — not the normal resolution route.
+testpaths = ["python/geoai-core/tests"]

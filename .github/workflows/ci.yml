@@ -1,0 +1,155 @@
+# CI is one job that runs one command: `pixi run ci` (scripts/ci.sh). Everything this
+# workflow does besides that is toolchain setup and caching, which is the only thing a
+# CI file should own — if a step here knew how to lint or test something, the local
+# gate and CI could disagree, and CI would be the only place you could find out.
+#
+# Two other jobs exist, and both are cheap and independent on purpose:
+#
+#   `sandbox-plan` needs neither the pixi environment nor the Bun workspace, so it
+#   reports a broken publish contract in under a minute instead of waiting behind a
+#   multi-gigabyte QGIS solve.
+#   `airlock` is the offline proof. It is `workflow_call`-able rather than triggered
+#   here, because the authoritative version runs on the plan's own native runner with
+#   egress denied — see the airlock job's header in its own workflow file.
+#
+# What this file deliberately does NOT do:
+#
+#   * no actions/setup-python. The pixi `default` environment already carries the
+#     interpreter QGIS was compiled against (3.12.*). A second interpreter on PATH is
+#     how you get a wheel built for one ABI and imported by another.
+#   * no setup-node. `bun` is a conda dependency; a system node would be a second
+#     JavaScript runtime, and every `.bin` entry carries a node shebang this
+#     repository deliberately does not provide.
+#   * no per-package pytest steps. The turbo `test` task fans out across all three
+#     Python packages under one command and one ordering.
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Nothing here needs a colour-capable terminal, but pytest-xdist and QGIS both
+  # produce far less output without ANSI noise when they misbehave.
+  PYTHONUNBUFFERED: "1"
+  QT_QPA_PLATFORM: offscreen
+
+jobs:
+  # Cheap, independent, and therefore parallel: this needs neither the QGIS
+  # environment nor the Bun workspace, so a malformed publish contract reports in under
+  # a minute rather than behind a 20-minute solve.
+  sandbox-plan:
+    name: Sandbox publish plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up the pinned pixi-sandbox release binary
+        uses: Archont561/pixi-sandbox/setup@da230c2db2dff8a242c40a89c3a4c66de7777518 # v0.3.2
+        id: sandbox-setup
+        with:
+          version: v0.3.2
+          token: ${{ github.token }}
+
+      - name: Validate the reviewed publish plan
+        run: '"${{ steps.sandbox-setup.outputs.path }}" plan --config .pixi-sandbox.toml --json'
+
+  ci:
+    name: CI
+    runs-on: ubuntu-latest
+    # Generous, because the QGIS solve plus three path-source package builds is most of
+    # it. The point of the number is to stop a job hanging on a wedged runner rather
+    # than to predict a duration.
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Only the Pixi executable. `pixi install --locked` below is the step that owns
+      # the environment, so the action's own cache is disabled rather than fighting it
+      # for the same directory.
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+        with:
+          pixi-version: v0.81.0
+          run-install: false
+          cache: false
+
+      # Environment cache keyed on the lockfile. The exact sha in the key means a
+      # partially written cache is never poisoned — actions/cache only saves on a full
+      # key miss.
+      - name: Cache the pixi environment
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .pixi/envs
+          key: pixi-envs-${{ runner.os }}-${{ hashFiles('pixi.lock') }}-${{ github.sha }}
+          restore-keys: |
+            pixi-envs-${{ runner.os }}-${{ hashFiles('pixi.lock') }}-
+            pixi-envs-${{ runner.os }}-
+
+      # Turbo's content-hash cache lets the gate skip packages whose inputs did not
+      # change. The Python packages set `cache: false` on every task — see
+      # python/turbo.json for why — so this currently caches the workspace install
+      # bookkeeping rather than test results, which is correct: the environment, not the
+      # source, is what determines a Python result.
+      - name: Cache the turborepo task cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ hashFiles('bun.lock') }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ hashFiles('bun.lock') }}-
+            turbo-${{ runner.os }}-
+
+      # The lockfile IS the environment. A solution that differs from it is not this
+      # project's environment, and `--locked` is what turns a stale pixi.lock into a
+      # failure at this step rather than a silently different dependency graph later.
+      - name: Install the locked environment
+        run: pixi install --locked
+
+      # The Bun workspace: turbo, biome, backlog and the skills CLI. One resolution
+      # record at the root, no lockfile per member.
+      - name: Install the Bun workspace from the root lockfile
+        run: pixi run bun-install
+
+      - name: Verify every manifest states the same version
+        run: pixi run version-check
+
+      # THE gate. Identical to what a contributor runs before pushing, because it is
+      # literally the same script. Produces python/*/coverage.xml on the way.
+      - name: Run the CI gate
+        id: gate
+        run: |
+          set -o pipefail
+          pixi run ci 2>&1 | tee gate.log
+
+      - name: Upload the gate log
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: gate-log
+          path: gate.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+      # Uploaded whether or not CODECOV_TOKEN is set (tokenless works for a public
+      # repo); `fail_ci_if_error: false` keeps a Codecov outage from turning a green
+      # gate red, which is the one failure mode people learn to ignore.
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          files: ./python/geoai-core/coverage.xml,./python/geoai-mcp/coverage.xml,./python/geoai-bench/coverage.xml
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}

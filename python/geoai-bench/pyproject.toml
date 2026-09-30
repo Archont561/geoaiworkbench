@@ -1,0 +1,73 @@
+[build-system]
+requires = ["hatchling>=1.32.4,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "geoai-bench"
+version = "0.1.0"
+license = "GPL-2.0-or-later"
+description = "GeoAnalystBench harness: task corpus, CLI agents and run orchestration"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+authors = [{ name = "Archont561", email = "142521648+Archont561@users.noreply.github.com" }]
+keywords = ["benchmark", "gis", "pyqgis", "agents", "evaluation"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: GIS",
+]
+dependencies = [
+  "geoai-core>=0.1.0",
+  "typer>=0.15,<1",
+  "rich>=13.9,<15",
+  "pydantic>=2.12,<3",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.4,<9",
+  "pytest-cov>=7.1,<8",
+  "ruff>=0.14,<0.15",
+]
+
+[project.urls]
+Homepage = "https://github.com/Archont561/geoaiworkbench"
+Repository = "https://github.com/Archont561/geoaiworkbench"
+Issues = "https://github.com/Archont561/geoaiworkbench/issues"
+
+# The harness's user-facing surface. A console script here is what makes the
+# published package a tool rather than a library, and what the airlock gate invokes
+# to prove a restored environment can run something.
+[project.scripts]
+geoai-bench = "geoai_bench.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/geoai_bench"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["python/geoai-bench/src"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+  "ANN401",
+  "COM812",
+  "D203",
+  "D213",
+  "ISC001",
+  "S101",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D100", "D101", "D102", "D103", "INP001", "PLR2004"]
+"src/geoai_bench/__init__.py" = ["A005"]
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.pytest.ini_options]
+testpaths = ["python/geoai-bench/tests"]

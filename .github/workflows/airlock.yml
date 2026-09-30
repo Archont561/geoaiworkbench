@@ -1,0 +1,229 @@
+# Native airlock proof: pack a transport on the runner the plan names, publish it to a
+# throwaway local remote, restore it, and prove the restore needs no network.
+#
+# Why this is not part of ci.yml: ci proves the code builds and the tests pass. This
+# proves the *claim the project sells* — that a machine with no network can reconstruct a
+# working QGIS + Python environment from a git branch. A green ci on ubuntu says nothing
+# about whether the transport is complete, which is the only failure that matters here.
+#
+# Two tiers, and the distinction matters:
+#   Tier B runs the gate with the network reachable. It is a smoke test.
+#   Tier A runs the same gate with egress actually denied. This is the authoritative one.
+# Only Tier A can fail for the reason we care about. `pixi install --offline` is a
+# *request*, not an enforcement: over a live network a damaged prefix is quietly
+# re-fetched and the command reports success. See scripts/airlock-gate.sh.
+#
+# Nothing here touches a real branch or a real remote — the publish step targets a bare
+# repo under the runner's own temp directory, so the proof is self-contained and safe on a
+# pull request.
+#
+# NOTE there is no `actions/cache` in this file, deliberately. A cache hit would hand the
+# restored environment a prefix built by an earlier run, which is exactly the thing under
+# test. The proof has to pay the full install cost every time or it proves nothing.
+
+name: airlock
+
+on:
+  workflow_call:
+    inputs:
+      block-network:
+        type: boolean
+        description: Run the authoritative egress-denied tier.
+        required: false
+        default: true
+  workflow_dispatch:
+    inputs:
+      block-network:
+        type: boolean
+        description: Run the authoritative egress-denied tier.
+        required: false
+        default: true
+  schedule:
+    # Weekly, off the hour — far enough from the top of the day to share runners, and far
+    # enough apart that a transport only breaks on a lockfile change.
+    - cron: "17 5 * * 1"
+  pull_request:
+    paths:
+      - "pixi.toml"
+      - "pixi.lock"
+      - "python/*/pixi.toml"
+      - "python/*/pyproject.toml"
+      - ".pixi-sandbox.toml"
+      - "scripts/airlock-gate.sh"
+      - "scripts/restore.sh"
+      - ".github/workflows/airlock.yml"
+      - ".github/workflows/publish-sandbox.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: airlock-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Cheap and independent, so it runs in parallel with ci rather than behind it: a
+  # malformed publish contract reports in under a minute instead of after the solve.
+  plan:
+    name: validate airlock plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The released binary, not one built from source. There is no Cargo workspace here
+      # to build from, and a real airlock begins with a checksum-verified released binary —
+      # so that is what the proof drives.
+      - uses: Archont561/pixi-sandbox/setup@da230c2db2dff8a242c40a89c3a4c66de7777518 # v0.3.2
+        id: sandbox
+        with:
+          # LOCAL: pinned to the same release as publish-sandbox.yml. There is no
+          # Cargo.toml here to derive it from, so this literal is the only declaration
+          # and the two workflows must move together.
+          version: v0.3.2
+
+      - name: Emit the native matrix
+        id: plan
+        shell: bash
+        run: echo "matrix=$("${{ steps.sandbox.outputs.path }}" plan --json)" >> "$GITHUB_OUTPUT"
+
+  proof:
+    name: airlock ${{ matrix.platform }}
+    needs: plan
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      # Only `.include` is a matrix. `plan --json` also emits a scalar `schema` version, and
+      # Actions reads every other key as a dimension that must be an array — handing it the
+      # whole object silently yields zero jobs.
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.matrix).include }}
+    env:
+      ENVS: ${{ matrix.environments }}
+      BRANCH: ${{ matrix.branch }}
+      # `inputs` is null on `pull_request` and `schedule`, and in GitHub expressions
+      # `null == false` is true — so the spelling `inputs.block-network == false` resolves to
+      # 'false' on exactly the two triggers that actually fire, and Tier A would be skipped on
+      # every run this workflow has ever done. The authoritative tier has to be opt-out, never
+      # opt-in: absent input means blocked, and only an explicit `false` turns it off.
+      BLOCK_NETWORK: ${{ inputs.block-network == null && 'true' || (inputs.block-network && 'true' || 'false') }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # pixi must be on PATH because the publish action drives `pixi install --frozen`
+      # inside the project before packing. `run-install: false` — this job must not build an
+      # environment that the transport is then compared against.
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+        with:
+          pixi-version: v0.81.0
+          run-install: false
+          cache: false
+
+      - name: Install the released pixi-sandbox (checksum-verified)
+        id: sandbox
+        uses: Archont561/pixi-sandbox/setup@da230c2db2dff8a242c40a89c3a4c66de7777518 # v0.3.2
+        with:
+          version: v0.3.2
+
+      - name: Report the platform contract
+        run: |
+          echo "platform: ${{ matrix.platform }}"
+          echo "envs:     $ENVS"
+          echo "branch:   $BRANCH"
+          echo "runner:   ${{ matrix.runner }}"
+
+      # ── pack and publish ──────────────────────────────────────────────────────────
+      # Into a bare repo under the runner's temp dir. `publish` force-pushes an orphan
+      # branch, which is the real code path, but the remote is disposable — a PR run cannot
+      # disturb the real sandbox branches. It has to exist before the push.
+      - name: Create the throwaway remote
+        run: git init -q --bare "${{ runner.temp }}/airlock-remote.git"
+
+      - name: Publish the transport to the throwaway remote
+        uses: Archont561/pixi-sandbox/publish@da230c2db2dff8a242c40a89c3a4c66de7777518 # v0.3.2
+        with:
+          project: .
+          environments: ${{ matrix.environments }}
+          platform: ${{ matrix.platform }}
+          branch: ${{ matrix.branch }}
+          cargo-vendor: ${{ matrix.cargo_vendor }}
+          self-bin: ${{ steps.sandbox.outputs.path }}
+          remote: ${{ runner.temp }}/airlock-remote.git
+          output-dir: ${{ runner.temp }}/airlock-transport
+          push-token: ""
+
+      - name: Fetch the published branch the way a developer would
+        shell: bash
+        run: |
+          set -euo pipefail
+          HOST="${{ runner.temp }}/airlock-host"
+          rm -rf "$HOST" && mkdir -p "$HOST"
+          cd "$HOST"
+          git init -q
+          git remote add origin "${{ runner.temp }}/airlock-remote.git"
+          git fetch -q --depth 1 origin "$BRANCH:$BRANCH"
+          git worktree add -q ../airlock-checkout "$BRANCH" --force
+
+      # Verify every declared byte before trusting the checkout.
+      - name: Verify the published branch before restoring
+        run: '"${{ steps.sandbox.outputs.path }}" doctor --branch-location "${{ runner.temp }}/airlock-checkout" --verify'
+
+      # ── restore ──────────────────────────────────────────────────────────────────
+      # In place over a *copy* of the project, which is the situation the airlock describes: a
+      # developer has the repository and reconstructs the environment under it.
+      - name: Restore into a copy of the project
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp -r . "${{ runner.temp }}/restored"
+          "${{ steps.sandbox.outputs.path }}" restore \
+            --branch-location "${{ runner.temp }}/airlock-checkout" \
+            --output-path "${{ runner.temp }}/restored" \
+            --envs "$ENVS" --force
+
+      # ── the gate ─────────────────────────────────────────────────────────────────
+      # --transport hands the gate the extracted branch so its integrity section can compare
+      # the restored tree against the manifest's per-file digests instead of shape alone.
+      - name: Tier B — gate with the network reachable
+        run: bash scripts/airlock-gate.sh "${{ runner.temp }}/restored" "$ENVS" --transport "${{ runner.temp }}/airlock-checkout"
+
+      - name: Tier A — gate with egress denied
+        if: ${{ env.BLOCK_NETWORK == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$(uname -s)" in
+            Linux)
+              # A private network namespace: no route, no DNS, nothing to fall back to.
+              sudo unshare -n -- bash scripts/airlock-gate.sh "${{ runner.temp }}/restored" "$ENVS" --transport "${{ runner.temp }}/airlock-checkout"
+              ;;
+            *)
+              # There is no osx-* target in .pixi-sandbox.toml, so this is unreachable today.
+              # It is an explicit error rather than a skip because a plan edit that adds a
+              # platform must not silently leave Tier A unproven — add `sandbox-exec
+              # -p '(version 1)(allow default)(deny network-outbound)'` above and change this
+              # to pass.
+              echo "::error::no egress-denial mechanism known for $(uname -s)" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Summarise
+        if: always()
+        run: |
+          {
+            echo "### airlock ${{ matrix.platform }}"
+            echo ""
+            echo "- runner: \`${{ matrix.runner }}\`"
+            echo "- branch: \`$BRANCH\` (throwaway remote, discarded)"
+            echo "- envs: \`$ENVS\`"
+            echo "- tier B: gate with the network reachable"
+            echo "- tier A: gate with egress denied"
+          } >> "$GITHUB_STEP_SUMMARY"

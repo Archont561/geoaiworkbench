@@ -1,0 +1,87 @@
+# lefthook — local git hooks. The hook environment always comes from pixi
+# (contributors may not have bun or the QGIS environment on PATH otherwise).
+# Repository-management checks share the root pixi tasks; package-specific checks
+# invoke the environment's tools in their staged-file form, because the
+# repository-wide form of each is already a turbo fan-out in `pixi run gates`.
+# https://lefthook.dev
+#
+# Only *staged* files are considered: `glob` filters which files wake a hook and
+# `{staged_files}` expands to the staged paths. That is what makes an
+# every-commit check affordable here at all — the untargeted form of the same
+# checks walks a 2.9 GB .pixi tree if it is not told what to look at.
+#
+# Note the single environment. The reference repository this follows splits its
+# tasks across `-e default` and `-e bun`; here QGIS and bun share one conda solve
+# (see pixi.toml), so every task is a plain `pixi run` and there is no `-e` to
+# get wrong.
+
+min_version: "2.0.0"
+
+pre-commit:
+  parallel: true
+  jobs:
+    - name: python-fmt
+      # Whole-`python/` rather than the staged files: ruff on this repository's
+      # three packages takes milliseconds, and a per-package invocation means
+      # computing which package a staged file belongs to — a shell pipeline that
+      # is more likely to be wrong than it is to be fast. The staged files still
+      # gate *whether* the hook wakes at all.
+      glob: "python/**/*.py"
+      run: bash -c 'cd python && for pkg in geoai-core geoai-mcp geoai-bench; do (cd "$pkg" && ruff check --fix . && ruff format .); done'
+
+    - name: toml-fmt
+      # Only pixi.toml and .pixi-sandbox.toml are in taplo's canonical form; the
+      # rest of the repository uses the aligned-`=` style deliberately, so the
+      # hook is scoped to what taplo owns (see `lint-toml` in pixi.toml).
+      glob: "{pixi.toml,.pixi-sandbox.toml}"
+      run: pixi run -- lint-toml {staged_files}
+
+    - name: js-biome
+      # Whole-repo enforcement is `pixi run lint-js` in `gates`; this is the
+      # staged-file form, same global biome config, focused output.
+      glob: "*.{js,ts,mts,mjs,cjs,json,jsonc,css}"
+      run: pixi run -- fmt-js
+
+    - name: workflows
+      glob: ".github/workflows/*.{yml,yaml}"
+      run: pixi run lint-actions
+
+    - name: shell-syntax
+      # `bash -n` parses without executing. A syntax error in a hook that runs on
+      # every push is the one failure in this file that blocks the hook itself,
+      # which makes it look like lefthook is broken rather than like the script.
+      glob: "scripts/*.sh"
+      run: bash -n scripts/*.sh
+
+    - name: executables
+      # A script loses its mode bit on more than one path (a zip round-trip, a
+      # checkout before .gitattributes landed) and the symptom is "Permission
+      # denied" in the pre-push hook, with no diff to explain it.
+      glob: "scripts/*.sh"
+      run: bash -c 'chmod +x scripts/*.sh'
+
+    - name: merge-conflict
+      glob: "*"
+      run: grep -IlE '^(<<<<<<<|>>>>>>>)( |$)' $(git diff --cached --name-only --diff-filter=ACM) && exit 1 || exit 0
+
+    - name: trailing-whitespace
+      glob: "*"
+      run: git diff --cached --check --diff-filter=ACM
+
+commit-msg:
+  jobs:
+    - name: convco
+      # `{1}` is the file holding the proposed message (git's commit-msg hook
+      # argument); `lint-commit` reads it from stdin.
+      run: pixi run lint-commit < {1}
+
+pre-push:
+  parallel: false
+  jobs:
+    # One call, the same file CI runs (scripts/ci.sh). `--no-coverage` because
+    # coverage exists to be uploaded and nothing gates on it: running it here adds
+    # ~40 s to every push to produce a file nobody reads. The format-drift rewrite is
+    # NOT skipped — it is the cheapest check in the script and the only one that
+    # catches a file the formatters would have changed.
+    - name: gate
+      run: bash scripts/ci.sh --no-coverage

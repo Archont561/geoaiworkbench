@@ -1,0 +1,63 @@
+# python/geoai-core/pixi.toml — the `geoai-core` conda package.
+#
+# A pure-Python package, so the artefact is `noarch: python` and the same file
+# installs on every platform: the benchmark's own types are platform-independent,
+# and a wheel built for one interpreter ABI is a wheel that will not install on
+# another.
+#
+# There is no `[workspace]` table here on purpose. A sub-manifest with one would be
+# a second pixi workspace with a second pixi.lock; a package section needs no more
+# than the tables below to be discovered by the root workspace.
+#
+# The root `pixi.toml` registers this directory as a path source dependency
+# (`geoai-core = { path = "python/geoai-core" }`), which is what makes `pixi install`
+# build and install it into the root `default` environment.
+
+[package]
+name = "geoai-core"
+# Inherits rather than restating: `version-check` walks the manifests and fails on
+# a literal, so the two cannot drift.
+version = { workspace = true }
+publish = true
+license = "GPL-2.0-or-later"
+description = "Protocol-independent core types for the GeoAIWorkbench benchmark"
+readme = "README.md"
+repository = "https://github.com/Archont561/geoaiworkbench"
+homepage = "https://github.com/Archont561/geoaiworkbench"
+
+[package.build]
+# pixi-build-python runs the project's own build backend (hatchling, from
+# `[build-system]` in pyproject.toml) and installs the wheel into the conda prefix.
+backend = { name = "pixi-build-python", version = ">=0.8,<0.9", channels = [
+  "https://prefix.dev/conda-forge",
+] }
+
+[package.build.config]
+# A package with no compiled parts is noarch. Spelled out rather than left to the
+# default because the default is inferred: if a C extension ever arrives this has
+# to become false, and the day it does should be a diff in this file rather than a
+# silent switch from a platform package to a universal one.
+noarch = true
+# PyPI dependency mapping stays off because the run dependencies are declared as
+# conda packages below. Mapping would add pydantic a second time, from a mapping
+# service, for a name the solver already knows.
+ignore-pypi-mapping = true
+
+[package.build-dependencies]
+hatchling = ">=1.32.4,<2"
+
+[package.host-dependencies]
+# The interpreter constraint goes here, not in build-dependencies: the backend adds
+# python to host and run itself, and a host spec is what propagates to the run
+# dependency of the published package. `requires-python` in pyproject.toml says the
+# same thing; this is the one the solver reads.
+python = ">=3.12,<3.13"
+hatchling = ">=1.32.4,<2"
+
+[package.run-dependencies]
+python = ">=3.12,<3.13"
+# The core's whole runtime surface, declared as conda packages rather than a pypi
+# block: a conda package cannot satisfy a PyPI dependency at install time, and a
+# user on `pixi add geoai-core` must get the solver's answer, not a mapping
+# service's.
+pydantic = ">=2.12,<3"

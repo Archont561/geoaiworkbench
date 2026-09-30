@@ -1,0 +1,26 @@
+# Normalise line endings on checkin; the gate runs on Linux and a CRLF commit would
+# fail every shell script's `set -euo pipefail` parse on a fresh clone.
+* text=auto eol=lf
+
+# The lockfiles are committed and are never hand-edited, so a textual merge is
+# never the right answer for either. `merge=binary` makes git refuse a 3-way merge
+# and force a manual re-lock; `-diff` keeps a multi-megabyte TOML diff out of PRs
+# that only bumped one transitive dependency; `linguist-generated` keeps them out of
+# the repository's language statistics, which would otherwise read as ~40% TOML.
+pixi.lock merge=binary linguist-language=TOML linguist-generated=true -diff
+bun.lock  merge=binary linguist-language=JSON linguist-generated=true -diff
+
+# Sandbox transports are opaque binaries to GitHub even when committed by hand.
+*.pixib  binary
+*.tar.zst binary
+
+# Scripts keep their executable bit and are never CRLF-normalised, because a lost
+# mode turns `scripts/ci.sh` into "Permission denied" in the lefthook hook and
+# "not executable" in CI, with no diff to show for it.
+*.sh    text eol=lf
+scripts/*.sh text eol=lf
+
+# Nothing in this repository is minified source. Marking it once here means a
+# vendored or generated bundle cannot quietly reformat the whole repository later.
+*.min.js linguist-generated=true
+*.min.css linguist-generated=true

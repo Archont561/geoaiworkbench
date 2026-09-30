@@ -1,0 +1,30 @@
+{
+  "name": "geoaiworkbench",
+  "private": true,
+  "version": "0.1.0",
+  "license": "GPL-2.0-or-later",
+  "description": "Controlled empirical comparison of three paradigms for LLM-driven GIS automation",
+  "packageManager": "bun@1.3.11",
+  "//workspaces": "Members are the Python packages plus the agent-tooling fa\u00e7ades. `python` itself is listed explicitly as well as globbed: `python/*` matches `python/geoai-core` and its siblings but NOT `python/package.json`, and the container package is the one whose `turbo.json` turns caching off for all three. Without the explicit entry the nested config is silently dead. There is no TypeScript source yet, so nothing needs a `typecheck`; turbo skips a task a package does not declare, and the seam is where the first TS package lands. `opencode-ai` is deliberately NOT a dependency: it is a CLI installed globally by `pixi run opencode-install`, and a copy in node_modules is a second version nobody would run.",
+  "workspaces": [
+    "python",
+    "python/*"
+  ],
+  "scripts": {
+    "lint": "biome check .",
+    "fmt": "biome check --write .",
+    "all:build": "turbo run build",
+    "all:test": "turbo run test",
+    "all:lint": "turbo run lint",
+    "all:cov": "turbo run cov",
+    "all:fmt": "turbo run fmt"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.15",
+    "@types/bun": "^1.3.11",
+    "backlog.md": "^1.53.0",
+    "skills": "^1.7.0",
+    "turbo": "^2.11.5",
+    "typescript": "^5.9.0"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "//": "There is no TypeScript source in this repository yet — scripts/version.ts is the sole exception and it is a repository-global tool, not a package. This file exists so the first TypeScript package (the documentation site, and whatever the MCP client bridge becomes) has a base to extend rather than inventing one, and so `bun x tsc` resolves in an editor today instead of after the first .ts file lands.",
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true
+  }
+}
